@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/**
+ * Follow-up state shared by quote requests and contact messages.
+ */
+enum RequestStatus {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
+model QuoteRequest {
+  id        String        @id @default(cuid())
+  name      String?
+  company   String?
+  email     String
+  phone     String
+  /**
+   * Ids from quoteProductIds in content/common.ts
+   */
+  products  String[]
+  message   String?
+  status    RequestStatus @default(NEW)
+  note      String?
+  /**
+   * Site language the request came from: "mn" | "en"
+   */
+  locale    String        @default("mn")
+  ip        String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([ip, createdAt])
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String?
+  email     String
+  phone     String?
+  /**
+   * One of contactTopics in content/common.ts
+   */
+  topic     String
+  message   String
+  status    RequestStatus @default(NEW)
+  note      String?
+  /**
+   * Site language the message came from: "mn" | "en"
+   */
+  locale    String        @default("mn")
+  ip        String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([ip, createdAt])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}

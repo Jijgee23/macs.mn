@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* Theme is chosen by data-theme on <html> (light by default, see app/layout.tsx). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --soft: #f7f7f8;
+  --line: #ececef;
+  --line-strong: #dcdce1;
+  --ink: #0b0b0f;
+  --muted: #6b6b76;
+  --brand: #b91c1c;
+  --brand-soft: #fef2f2;
+  --brand-line: #fecaca;
+  --cta: #b91c1c;
+  --cta-hover: #991b1b;
+  --ok: #15803d;
+  --ok-soft: #f0fdf4;
+  --shadow-card: 0 1px 2px rgba(16, 16, 24, 0.04), 0 8px 24px -12px rgba(16, 16, 24, 0.08);
+  --shadow-pop: 0 1px 2px rgba(16, 16, 24, 0.05), 0 24px 60px -20px rgba(16, 16, 24, 0.22);
+  --grid-dot: rgba(11, 11, 15, 0.07);
+  --glow: rgba(185, 28, 28, 0.1);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #09090b;
+  --surface: #111114;
+  --soft: #0e0e11;
+  --line: #222228;
+  --line-strong: #2e2e36;
+  --ink: #f4f4f5;
+  --muted: #a1a1aa;
+  --brand: #f87171;
+  --brand-soft: #1f1012;
+  --brand-line: #3f1518;
+  --cta: #dc2626;
+  --cta-hover: #b91c1c;
+  --ok: #86efac;
+  --ok-soft: #0f1f14;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 24px 60px -20px rgba(0, 0, 0, 0.7);
+  --grid-dot: rgba(255, 255, 255, 0.06);
+  --glow: rgba(248, 113, 113, 0.12);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-soft: var(--soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-line: var(--brand-line);
+  --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --font-sans: var(--font-golos), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+section[id] {
+  scroll-margin-top: 5rem;
+}
+
+.bg-dots {
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.bg-glow {
+  background: radial-gradient(60% 50% at 50% 0%, var(--glow), transparent 70%);
+}
+
+/* Page container: full width with fluid side padding. Capped only on very wide screens
+   so lines and card grids stay readable. */
+@utility container-wide {
+  width: 100%;
+  max-width: 1920px;
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= 40rem) {
+    padding-inline: 3rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 5rem;
+  }
+  @media (width >= 80rem) {
+    padding-inline: 8rem;
+  }
+}

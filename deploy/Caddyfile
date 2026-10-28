@@ -1,0 +1,9 @@
+# Append to /etc/caddy/Caddyfile next to the existing docs.macs.mn block.
+macs.mn {
+	reverse_proxy 127.0.0.1:3001
+	encode gzip zstd
+}
+
+www.macs.mn {
+	redir https://macs.mn{uri} permanent
+}
