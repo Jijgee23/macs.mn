@@ -312,5 +312,6 @@ export const en: SiteContent = {
     invalidPhone: "Please enter a valid phone number",
     tooLong: "This is too long",
     rateLimited: "Please wait a moment and try again, or give us a call.",
+    unavailable: "Something went wrong. Please try again or call +976 7012 6399.",
   },
 };

@@ -51,7 +51,7 @@ export const moduleDocsIds: Record<ModuleKey, string> = {
   tools: "tools-inv",
 };
 
-/** Ids stored in QuoteRequest.products; labels come from the locale content. */
+/** Ids sent to the docs API (must match QUOTE_PRODUCTS there); labels come from the locale content. */
 export const quoteProductIds = [
   "macs-erp",
   "macsxe4",
@@ -64,12 +64,15 @@ export const quoteProductIds = [
 
 export type QuoteProductId = (typeof quoteProductIds)[number];
 
-/** Topics on the general contact form; stored in ContactMessage.topic. */
+/** Contact form topics (must match CONTACT_TOPICS in the docs API). */
 export const contactTopics = ["general", "feedback", "support", "partnership", "other"] as const;
 
 export type ContactTopic = (typeof contactTopics)[number];
 
-/** Validation codes returned by the form Server Actions and translated by the forms. */
-export const formErrorCodes = ["required", "invalidEmail", "invalidPhone", "tooLong", "rateLimited"] as const;
+/**
+ * Error codes returned by the docs site API (macs_documents/lib/inquiries.ts) and
+ * translated by the forms; "unavailable" means the API couldn't be reached.
+ */
+export const formErrorCodes = ["required", "invalidEmail", "invalidPhone", "tooLong", "rateLimited", "unavailable"] as const;
 
 export type FormErrorCode = (typeof formErrorCodes)[number];

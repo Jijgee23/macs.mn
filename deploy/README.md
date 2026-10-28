@@ -1,79 +1,61 @@
-﻿# Deploy — macs.mn (same Ubuntu server as docs.macs.mn)
+﻿# Deploy — macs.mn (103.143.40.48, same server as docs.macs.mn)
 
-The site runs on port **3001** next to the docs site (port 3000), behind the same Caddy, and uses its own database `macs_site` on the same PostgreSQL instance.
+macs.mn has **no database**. The quote and contact forms are forwarded server-to-server to the docs site (`macs_documents`, `POST /api/site/quote` and `/api/site/contact`), which validates and stores them, emails the team via Resend, and lists them at `docs.macs.mn/admin/requests` and `/admin/messages`.
 
-## 1. PostgreSQL
+The server runs every app under **pm2** (user `ubuntu`, Node 22 from nvm) behind **nginx** with certbot TLS:
+
+| App | pm2 name | Dir | Port |
+|---|---|---|---|
+| docs.macs.mn | `macs_documents` | `~/macs_documents` | 3004 |
+| macs.mn | `macs_mn` | `~/macs.mn` | 3030 |
+
+> The system `/usr/bin/node` is v18, too old for Next 16. Always put nvm's Node 22 first in `PATH` before `npm`/`pm2` commands, especially `pm2 restart --update-env` (it copies your shell's PATH into the app):
+> `export PATH=$HOME/.nvm/versions/node/v22.21.1/bin:$PATH`
+
+## First deploy
 
 ```bash
-sudo -u postgres psql <<'SQL'
-CREATE ROLE macs_site WITH LOGIN PASSWORD 'CHANGE_ME';
-CREATE DATABASE macs_site OWNER macs_site;
-SQL
-```
-
-For local development `prisma migrate dev` also needs a shadow database, so give the local role `CREATEDB` (`ALTER ROLE macs_site CREATEDB;`). Production uses `migrate deploy` and does not need it.
-
-## 2. Node + app
-
-Node 24+, in `/srv/macs-site` (owned by user `macssite`):
-```bash
+export PATH=$HOME/.nvm/versions/node/v22.21.1/bin:$PATH
+git clone https://github.com/Jijgee23/macs.mn.git ~/macs.mn
+cd ~/macs.mn
+# .env — see below
 npm ci
-npx prisma generate
-npm run db:migrate:deploy
 npm run build
-npm run db:seed-admin   # first deploy only, or to reset the admin password
+pm2 start npm --name macs_mn -- start -- -p 3030
+pm2 save
 ```
 
-## 3. `.env` on the server
-
+`.env`:
 ```
-DATABASE_URL=postgresql://macs_site:CHANGE_ME@localhost:5432/macs_site
-SESSION_SECRET=<openssl rand -base64 32>
-NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=<openssl rand -base64 32>
-ADMIN_EMAIL=<admin email>
-ADMIN_PASSWORD=<admin password, 8+ chars>
 SITE_URL=https://macs.mn
-
-# Quote notification email (optional — requests are always saved to the DB)
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
-NOTIFY_TO=contact@infosystems.mn
+DOCS_API_URL=http://127.0.0.1:3004
+SITE_API_KEY=<same value as SITE_API_KEY in ~/macs_documents/.env>
+NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=<openssl rand -base64 32>
 ```
+- `DOCS_API_URL` reaches the docs app directly on this machine, skipping nginx and TLS.
+- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` must stay the same across builds, otherwise forms open during a deploy fail.
 
-`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` must be pinned, otherwise Server Action IDs rotate on every build and forms open during a deploy fail.
-
-## 4. systemd
+## nginx + TLS (needs sudo)
 
 ```bash
-sudo cp deploy/macs-site.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now macs-site
+sudo cp ~/macs.mn/deploy/nginx-macs.mn.conf /etc/nginx/sites-available/macs.mn
+sudo ln -s /etc/nginx/sites-available/macs.mn /etc/nginx/sites-enabled/macs.mn
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d macs.mn -d www.macs.mn
 ```
+The nginx config overwrites `X-Forwarded-For` with the client address; the docs API rate-limits per IP on it.
 
-## 5. Caddy
-
-Append `deploy/Caddyfile` to `/etc/caddy/Caddyfile`, point the `macs.mn` and `www.macs.mn` DNS A records at the server, then `sudo systemctl reload caddy`.
-
-Caddy sets `X-Forwarded-For` and drops the client-supplied value, which the quote form's per-IP rate limit relies on. Don't expose port 3001 directly.
-
-## 6. Redeploys
+## Redeploys
 
 ```bash
+export PATH=$HOME/.nvm/versions/node/v22.21.1/bin:$PATH
+cd ~/macs.mn
 git pull
 npm ci
-npx prisma generate
-npm run db:migrate:deploy
 npm run build
-sudo systemctl restart macs-site
+pm2 restart macs_mn --update-env
 ```
 
-## Admin
+## Checking the forms
 
-- `https://macs.mn/admin` — quote requests (Үнийн санал).
-- `https://macs.mn/admin/messages` — contact form messages (Санал хүсэлт).
-
-Both filter by status (Шинэ / Холбогдсон / Хаасан) and take a follow-up note. Requests from the English site are marked **EN**.
+If a form shows "Түр алдаа гарлаа…", macs.mn couldn't reach the docs API. `pm2 logs macs_mn` shows `[inquiry] …` with the reason: missing `SITE_API_KEY`, a 401 (keys differ), or the docs app being down.

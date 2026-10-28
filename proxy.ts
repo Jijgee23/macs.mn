@@ -2,24 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * 1. /admin/* — fast UX-level redirect only, NOT the real auth check. Every admin page
- *    and Server Action must independently call requireAdmin() (see lib/auth.ts).
- *    Cookie name must match SESSION_COOKIE in lib/auth.ts.
- * 2. Locales — Mongolian is served at the root ("/une-sanal") by rewriting to app/[lang]
- *    with lang=mn; English lives at "/en/...". "/mn/..." redirects to the root URL so
- *    each page has one address. Keep in sync with lib/locale.ts.
+ * Locales — Mongolian is served at the root ("/une-sanal") by rewriting to app/[lang]
+ * with lang=mn; English lives at "/en/...". "/mn/..." redirects to the root URL so
+ * each page has one address. Keep in sync with lib/locale.ts.
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-    const isLoginPage = pathname === "/admin/login";
-    const hasSession = request.cookies.has("macs_site_admin_session");
-    if (!isLoginPage && !hasSession) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
-    }
-    return NextResponse.next();
-  }
 
   if (pathname === "/en" || pathname.startsWith("/en/")) {
     return NextResponse.next();
