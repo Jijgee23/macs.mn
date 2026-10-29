@@ -15,7 +15,10 @@ export function proxy(request: NextRequest) {
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     const isLoginPage = pathname === "/admin/login";
     if (!isLoginPage && !request.cookies.has("macs_site_admin_session")) {
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      // Come back to the requested page after login (validated by safeNext in lib/auth.ts).
+      const login = new URL("/admin/login", request.url);
+      if (pathname !== "/admin") login.searchParams.set("next", pathname + request.nextUrl.search);
+      return NextResponse.redirect(login);
     }
     return NextResponse.next();
   }

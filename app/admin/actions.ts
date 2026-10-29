@@ -1,10 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { refresh, revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { getSession, hashPassword, requireAdmin, verifyPassword } from "@/lib/auth";
+import { getSession, hashPassword, requireAdmin, safeNext, startSession, verifyPassword } from "@/lib/auth";
 import { CONTENT_TAG } from "@/lib/content";
 import { contactInfoSchema, sectionSchemas, type SectionKey } from "@/content/schema";
 import { fieldLabels } from "@/content/admin-labels";
@@ -12,24 +13,61 @@ import { fieldLabels } from "@/content/admin-labels";
 /* ---------- Session ---------- */
 
 export type FormState = { ok?: boolean; error?: string };
+export type LoginState = { error?: string };
 
-export async function login(_prev: FormState, formData: FormData): Promise<FormState> {
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 5;
+
+/**
+ * Failed logins per IP+email, kept in memory: enough to slow down password guessing
+ * on a single server, and resets on restart.
+ */
+const loginFailures = new Map<string, number[]>();
+
+function recentFailures(key: string) {
+  const cutoff = Date.now() - LOGIN_WINDOW_MS;
+  const times = (loginFailures.get(key) ?? []).filter((t) => t > cutoff);
+  if (times.length) loginFailures.set(key, times);
+  else loginFailures.delete(key);
+  return times;
+}
+
+/** Compared against when the email is unknown, so both cases take the same time. */
+let dummyHash: Promise<string> | undefined;
+const getDummyHash = () => (dummyHash ??= hashPassword("not-a-real-password"));
+
+export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  if (!email || !password) return { error: "Имэйл болон нууц үгээ оруулна уу" };
 
-  const user = email ? await db.adminUser.findUnique({ where: { email } }) : null;
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return { error: "Имэйл эсвэл нууц үг буруу байна" };
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const key = `${ip}|${email}`;
+  const failures = recentFailures(key);
+  if (failures.length >= LOGIN_MAX_FAILURES) {
+    const minutes = Math.ceil((failures[0] + LOGIN_WINDOW_MS - Date.now()) / 60000);
+    return { error: `Олон удаа буруу оролдлоо. ${minutes} минутын дараа дахин оролдоно уу` };
   }
 
-  await db.adminUser.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-  const session = await getSession();
-  session.userId = user.id;
-  session.email = user.email;
-  session.isLoggedIn = true;
-  await session.save();
+  const user = await db.adminUser.findUnique({ where: { email } });
+  const valid = await verifyPassword(password, user?.passwordHash ?? (await getDummyHash()));
+  if (!user || !valid) {
+    failures.push(Date.now());
+    loginFailures.set(key, failures);
+    const left = LOGIN_MAX_FAILURES - failures.length;
+    return {
+      error:
+        left > 0 && left <= 2
+          ? `Имэйл эсвэл нууц үг буруу байна. ${left} оролдлого үлдлээ`
+          : "Имэйл эсвэл нууц үг буруу байна",
+    };
+  }
 
-  redirect("/admin");
+  loginFailures.delete(key);
+  await db.adminUser.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  await startSession(user, formData.get("remember") === "on");
+
+  redirect(safeNext(formData.get("next")));
 }
 
 export async function logout() {
