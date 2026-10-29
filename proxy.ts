@@ -20,6 +20,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Uploaded images (app/media/[id]/route.ts) and the sitemap aren't localized.
+  if (pathname.startsWith("/media/") || pathname === "/sitemap.xml") {
+    return NextResponse.next();
+  }
+
   if (pathname === "/en" || pathname.startsWith("/en/")) {
     return NextResponse.next();
   }

@@ -11,6 +11,7 @@ export const adminSections: { key: SectionKey | "contact"; title: string; descri
   { key: "why", title: "Давуу тал", description: "Яагаад MACS ERP гэж?", page: "/#why" },
   { key: "implementation", title: "Нэвтрүүлэлт", description: "Нэвтрүүлэлтийн үе шатууд", page: "/#implementation" },
   { key: "trust", title: "Түнш, гишүүнчлэл", description: "Хамтран ажилласан байгууллагууд", page: "/" },
+  { key: "news", title: "Мэдээ хэсгийн текст", description: "Мэдээ, зөвлөмжийн хуудасны гарчиг, шүүлтүүр, товчнууд", page: "/medee" },
   { key: "cta", title: "Дуудлага (CTA)", description: "Нүүр хуудасны доод хар хэсэг", page: "/#contact" },
   { key: "quote", title: "Үнийн санал хуудас", description: "Хуудасны текст, формын талбарууд, бүтээгдэхүүний сонголтууд", page: "/une-sanal" },
   { key: "contactPage", title: "Холбоо барих хуудас", description: "Хуудасны текст, формын талбарууд, сэдвүүд", page: "/holboo-barih" },
@@ -26,6 +27,7 @@ export const adminSections: { key: SectionKey | "contact"; title: string; descri
 export const fieldLabels: Record<string, string> = {
   // common
   modules: "Модулиуд",
+  news: "Мэдээ",
   eyebrow: "Жижиг гарчиг",
   title: "Гарчиг",
   intro: "Танилцуулга",
@@ -94,6 +96,19 @@ export const fieldLabels: Record<string, string> = {
   phones: "Утаснууд",
   number: "Дугаар",
   kind: "Төрөл",
+  // news
+  all: "«Бүгд» шүүлтүүр",
+  newsLabel: "«Мэдээ» ангилал",
+  tipLabel: "«Зөвлөмж» ангилал",
+  empty: "Нийтлэлгүй үеийн текст",
+  readMore: "«Дэлгэрэнгүй»",
+  latestTitle: "Нүүр хуудасны гарчиг",
+  latestAll: "«Бүгдийг харах»",
+  share: "«Хуваалцах»",
+  copyLink: "«Холбоос хуулах»",
+  copied: "«Хуулагдлаа»",
+  back: "«Бүх нийтлэл» холбоос",
+  onlyInMongolian: "Зөвхөн монгол хэл дээр гэсэн мэдэгдэл",
   // forms
   directTitle: "Шууд холбогдох гарчиг",
   success: "Амжилттай илгээсний мессеж",

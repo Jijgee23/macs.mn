@@ -4,10 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { localeHref, locales, stripLocale, type Locale } from "@/lib/locale";
 
-export function LanguageSwitch({ current, label }: { current: Locale; label: string }) {
-  // The browser path: "/une-sanal" for Mongolian, "/en/une-sanal" for English.
-  const basePath = stripLocale(usePathname());
+type Props = { current: Locale; label: string };
 
+/** Links to the same page in the other language; must sit inside <Suspense> (usePathname on dynamic routes). */
+export function LanguageSwitch(props: Props) {
+  // The browser path: "/une-sanal" for Mongolian, "/en/une-sanal" for English.
+  return <LanguageLinks {...props} basePath={stripLocale(usePathname())} />;
+}
+
+/** Also the Suspense fallback, pointing at each language's home page. */
+export function LanguageLinks({ current, label, basePath }: Props & { basePath: string }) {
   return (
     <nav
       aria-label={label}

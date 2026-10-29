@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getIronSession, type SessionOptions } from "iron-session";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
@@ -31,6 +32,9 @@ function sessionOptions(): SessionOptions {
 }
 
 export async function getSession() {
+  // iron-session checks the seal's expiry with Date.now(); connection() keeps this
+  // request-time so Cache Components doesn't try to prerender it.
+  await connection();
   const session = await getIronSession<SessionData>(await cookies(), sessionOptions());
   if (!session.isLoggedIn) {
     session.isLoggedIn = false;

@@ -37,11 +37,12 @@ export function QuoteForm({ locale, t, success, errors, recaptchaSiteKey }: Prop
       <input type="hidden" name="lang" value={locale} />
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="block text-sm font-medium">
-          {t.email}
+          {t.email} <span className="text-brand">*</span>
           <input
             name="email"
             defaultValue={v?.email}
             type="email"
+            required
             autoComplete="email"
             className={inputClass}
             aria-invalid={!!e.email}

@@ -10,8 +10,9 @@ import type { Locale } from "@/lib/locale";
 
 /**
  * Spam checks (reCAPTCHA, then per-IP rate limit; the honeypot is checked in the
- * actions), validation and storage for the quote and contact forms. Email and phone
- * are both optional.
+ * actions), validation and storage for the quote and contact forms. Quote requests
+ * need an email (the quote is sent there); everything else, and the whole contact
+ * form apart from the message, is optional.
  */
 
 export type InquiryResult = {
@@ -28,6 +29,7 @@ const code = (c: FormErrorCode) => c;
 const optionalText = (max: number) =>
   z.string().trim().max(max, code("tooLong")).transform((v) => v || null);
 const requiredText = (max: number) => z.string().trim().min(1, code("required")).max(max, code("tooLong"));
+const email = z.string().trim().toLowerCase().min(1, code("required")).pipe(z.email(code("invalidEmail")));
 const optionalEmail = z
   .string()
   .trim()
@@ -46,7 +48,7 @@ const optionalPhone = z
   .transform((v) => v || null);
 
 const quoteSchema = z.object({
-  email: optionalEmail,
+  email,
   phone: optionalPhone,
   name: optionalText(120),
   company: optionalText(200),

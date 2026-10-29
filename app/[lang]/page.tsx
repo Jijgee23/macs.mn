@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { DOCS_URL, moduleDocsIds, moduleKeys, telHref, type ModuleKey } from "@/content/common";
 import { HeroMockup } from "@/components/HeroMockup";
+import { PostCard } from "@/components/PostCard";
+import { listPosts } from "@/lib/posts";
 import { getContent, getContentFor } from "@/lib/content";
 import { isLocale, localeHref } from "@/lib/locale";
 
@@ -72,6 +74,7 @@ function SectionHeading({
 
 export default async function Home() {
   const { locale, t, contact } = await getContent();
+  const latest = await listPosts(locale, undefined, 3);
   const quoteHref = localeHref(locale, "/une-sanal");
 
   return (
@@ -248,6 +251,30 @@ export default async function Home() {
           ))}
         </ol>
       </section>
+
+      {/* Latest posts (hidden until something is published) */}
+      {latest.length > 0 && (
+        <section className="container-wide pb-20 sm:pb-28">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionHeading eyebrow={t.news.eyebrow} title={t.news.latestTitle} />
+            <Link href={localeHref(locale, "/medee")} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
+              {t.news.latestAll} <ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {latest.map((p) => (
+              <PostCard
+                key={p.slug}
+                post={p}
+                href={localeHref(locale, `/medee/${p.slug}`)}
+                categoryLabel={p.category === "TIP" ? t.news.tipLabel : t.news.newsLabel}
+                readMore={t.news.readMore}
+                dateLocale={locale === "en" ? "en-GB" : "mn-MN"}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Trust */}
       <section className="border-y border-line bg-soft">

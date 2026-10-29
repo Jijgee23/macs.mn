@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const links = [
   { href: "/admin", label: "Хянах самбар" },
   { href: "/admin/content", label: "Контент" },
+  { href: "/admin/posts", label: "Нийтлэл" },
   { href: "/admin/requests", label: "Үнийн санал" },
   { href: "/admin/messages", label: "Санал хүсэлт" },
   { href: "/admin/users", label: "Админууд" },

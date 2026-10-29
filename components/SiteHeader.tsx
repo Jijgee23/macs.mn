@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
-import { LanguageSwitch } from "./LanguageSwitch";
+import { Suspense } from "react";
+import { LanguageLinks, LanguageSwitch } from "./LanguageSwitch";
 import { DOCS_URL } from "@/content/common";
 import { getContent } from "@/lib/content";
 import { localeHref } from "@/lib/locale";
@@ -12,8 +13,7 @@ export async function SiteHeader() {
   const nav = [
     { href: "/#products", label: t.nav.products },
     { href: "/#modules", label: t.nav.modules },
-    { href: "/#why", label: t.nav.why },
-    { href: "/#implementation", label: t.nav.implementation },
+    { href: "/medee", label: t.nav.news },
     { href: "/holboo-barih", label: t.nav.contact },
   ].map((item) => ({ ...item, href: localeHref(locale, item.href) }));
   const quoteHref = localeHref(locale, "/une-sanal");
@@ -40,7 +40,9 @@ export async function SiteHeader() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
-          <LanguageSwitch current={locale} label={t.nav.language} />
+          <Suspense fallback={<LanguageLinks current={locale} label={t.nav.language} basePath="/" />}>
+            <LanguageSwitch current={locale} label={t.nav.language} />
+          </Suspense>
           <ThemeToggle label={t.nav.theme} />
           <Link
             href={quoteHref}

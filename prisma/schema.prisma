@@ -76,3 +76,47 @@ model ContactMessage {
   @@index([status, createdAt])
   @@index([ip, createdAt])
 }
+
+enum PostCategory {
+  NEWS
+  TIP
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/** News article or tip at /medee/<slug>. Body fields hold sanitized HTML (lib/sanitize.ts). */
+model Post {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  category    PostCategory
+  status      PostStatus   @default(DRAFT)
+  titleMn     String
+  excerptMn   String
+  bodyMn      String
+  /** English version is optional; without titleEn the post is not listed on /en */
+  titleEn     String?
+  excerptEn   String?
+  bodyEn      String?
+  coverId     String?
+  publishedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  updatedBy   String?
+
+  @@index([status, publishedAt])
+}
+
+/** Uploaded image, served at /media/<id> (re-encoded to WebP by the upload route). */
+model Media {
+  id        String   @id @default(cuid())
+  mime      String
+  data      Bytes
+  width     Int
+  height    Int
+  size      Int
+  createdAt DateTime @default(now())
+  createdBy String?
+}

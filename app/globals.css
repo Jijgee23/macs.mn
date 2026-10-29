@@ -108,3 +108,83 @@ section[id] {
     padding-inline: 8rem;
   }
 }
+
+/* Post body (stored HTML from the admin rich-text editor, see lib/sanitize.ts). */
+.rich {
+  color: var(--ink);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.rich > * + * {
+  margin-top: 1.1em;
+}
+.rich h2 {
+  margin-top: 2em;
+  font-size: 1.6rem;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.rich h3 {
+  margin-top: 1.6em;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 700;
+}
+.rich a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rich ul,
+.rich ol {
+  padding-left: 1.4em;
+}
+.rich ul {
+  list-style: disc;
+}
+.rich ol {
+  list-style: decimal;
+}
+.rich li + li {
+  margin-top: 0.35em;
+}
+.rich li::marker {
+  color: var(--muted);
+}
+.rich blockquote {
+  border-left: 3px solid var(--brand);
+  background: var(--soft);
+  border-radius: 0 0.75rem 0.75rem 0;
+  padding: 0.9em 1.2em;
+  color: var(--ink);
+}
+.rich img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.9rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+.rich hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2.5em 0;
+}
+.rich strong,
+.rich b {
+  font-weight: 700;
+}
+/* Editor-only: empty-paragraph placeholder and selected image */
+.rich .ProseMirror-selectednode {
+  outline: 3px solid var(--brand);
+}
+.rich p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
