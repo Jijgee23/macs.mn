@@ -12,6 +12,7 @@ export const adminSections: { key: SectionKey | "contact"; title: string; descri
   { key: "implementation", title: "Нэвтрүүлэлт", description: "Нэвтрүүлэлтийн үе шатууд", page: "/#implementation" },
   { key: "trust", title: "Түнш, гишүүнчлэл", description: "Хамтран ажилласан байгууллагууд", page: "/" },
   { key: "news", title: "Мэдээ хэсгийн текст", description: "Мэдээ, зөвлөмжийн хуудасны гарчиг, шүүлтүүр, товчнууд", page: "/medee" },
+  { key: "faq", title: "Түгээмэл асуулт (FAQ)", description: "Асуулт, хариултууд — нүүр хуудсанд харагдана", page: "/#faq" },
   { key: "cta", title: "Дуудлага (CTA)", description: "Нүүр хуудасны доод хар хэсэг", page: "/#contact" },
   { key: "quote", title: "Үнийн санал хуудас", description: "Хуудасны текст, формын талбарууд, бүтээгдэхүүний сонголтууд", page: "/une-sanal" },
   { key: "contactPage", title: "Холбоо барих хуудас", description: "Хуудасны текст, формын талбарууд, сэдвүүд", page: "/holboo-barih" },
@@ -96,6 +97,9 @@ export const fieldLabels: Record<string, string> = {
   phones: "Утаснууд",
   number: "Дугаар",
   kind: "Төрөл",
+  // faq
+  question: "Асуулт",
+  answer: "Хариулт",
   // news
   all: "«Бүгд» шүүлтүүр",
   newsLabel: "«Мэдээ» ангилал",

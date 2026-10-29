@@ -7,6 +7,7 @@ import {
   Building2,
   ChartColumn,
   Check,
+  ChevronDown,
   FolderKanban,
   Landmark,
   Mail,
@@ -302,6 +303,48 @@ export default async function Home() {
             </ul>
           </div>
         </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="border-t border-line">
+        <div className="container-wide grid gap-10 py-20 sm:py-28 lg:grid-cols-[1fr_1.6fr]">
+          <div>
+            <SectionHeading eyebrow={t.faq.eyebrow} title={t.faq.title} intro={t.faq.intro} />
+            <Link
+              href={localeHref(locale, "/holboo-barih")}
+              className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
+            >
+              {t.nav.contact} <ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <div className="divide-y divide-line border-y border-line">
+            {t.faq.items.map((item) => (
+              <details key={item.question} className="group py-1">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left font-semibold transition-colors hover:text-brand [&::-webkit-details-marker]:hidden">
+                  {item.question}
+                  <ChevronDown className="size-5 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+                </summary>
+                <p className="pb-5 text-muted whitespace-pre-line">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+        <script
+          type="application/ld+json"
+          // FAQPage structured data: lets search engines show these as rich results.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              inLanguage: locale,
+              mainEntity: t.faq.items.map((i) => ({
+                "@type": "Question",
+                name: i.question,
+                acceptedAnswer: { "@type": "Answer", text: i.answer },
+              })),
+            }).replace(/</g, "\\u003c"),
+          }}
+        />
       </section>
 
       {/* CTA + contact */}

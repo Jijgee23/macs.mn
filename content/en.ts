@@ -232,6 +232,52 @@ export const en: SiteContent = {
     button: "Request a quote",
     secondary: "Send a question or feedback",
   },
+  faq: {
+    eyebrow: "FAQ",
+    title: "Frequently asked questions",
+    intro: "Can't find your answer? Get in touch with us.",
+    items: [
+      {
+        question: "How much does MACS ERP cost?",
+        answer:
+          "Pricing depends on the modules you choose, the number of users and branches, and your implementation needs. Send a request on the quote page and our specialist will contact you with an offer tailored to your organization.",
+      },
+      {
+        question: "Do I have to buy every module?",
+        answer: "No. You choose only the modules you need. Every module posts to the general ledger and flows into your financial statements automatically.",
+      },
+      {
+        question: "Does it connect to E-Barimt, banks, social insurance and E-tax?",
+        answer:
+          "Yes. It integrates with E-Barimt, bank POS and mobile payments, Corporate Gateway, bank statement import, the social and health insurance system, and E-tax.",
+      },
+      {
+        question: "Can we migrate data from our old system?",
+        answer:
+          "Yes. During implementation we migrate your master data, legacy system data, opening balances and breakdowns.",
+      },
+      {
+        question: "How does implementation work?",
+        answer:
+          "In 5 phases: analysis and planning, installation and setup, training, pilot and go-live, and ongoing support. The timeline depends on the size of your organization and the modules you choose.",
+      },
+      {
+        question: "Do you train our staff?",
+        answer:
+          "Yes. We provide training tailored to accountants, managers, cashiers and warehouse staff, plus additional training when new staff join or new modules are installed.",
+      },
+      {
+        question: "Are software updates free?",
+        answer:
+          "You receive all updates free of charge for a full year after purchase. Changes to social insurance, VAT, tax rules and E-Barimt are reflected in the system without delay.",
+      },
+      {
+        question: "How do I get technical support?",
+        answer:
+          "During business hours by phone (+976 7012 6399), by email (contact@infosystems.mn), by remote session, and on site when needed.",
+      },
+    ],
+  },
   news: {
     eyebrow: "News & tips",
     title: "News and tips",

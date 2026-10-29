@@ -44,6 +44,11 @@ export async function SiteFooter() {
             </Link>
           </p>
           <p>
+            <Link href={localeHref(locale, "/#faq")} className="text-muted hover:text-ink">
+              {t.faq.eyebrow}
+            </Link>
+          </p>
+          <p>
             <Link href={localeHref(locale, "/holboo-barih")} className="text-muted hover:text-ink">
               {t.nav.contact}
             </Link>

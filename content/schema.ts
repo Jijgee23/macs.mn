@@ -91,6 +91,12 @@ export const sectionSchemas = {
     memberships: z.array(text),
   }),
   cta: z.object({ title: text, body: text, button: text, secondary: text }),
+  faq: z.object({
+    eyebrow: text,
+    title: text,
+    intro: text,
+    items: z.array(z.object({ question: text, answer: text })).min(1),
+  }),
   news: z.object({
     eyebrow: text,
     title: text,
