@@ -1,4 +1,4 @@
-import type { SiteContent } from "./types";
+import type { SiteContent } from "./schema";
 
 export const en: SiteContent = {
   meta: {
@@ -232,7 +232,7 @@ export const en: SiteContent = {
     secondary: "Send a question or feedback",
   },
   footer: {
-    tagline: (year) => `Accounting software and business automation since ${year}.`,
+    tagline: "Accounting software and business automation since {year}.",
     contactTitle: "Contact",
     linksTitle: "Links",
     docs: "User manual (Mongolian)",

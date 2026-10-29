@@ -1,7 +1,8 @@
 "use server";
 
 import type { FormErrorCode } from "@/content/common";
-import { postInquiry } from "@/lib/docs-api";
+import { createQuote } from "@/lib/inquiries";
+import { defaultLocale, isLocale } from "@/lib/locale";
 
 type Field = "email" | "phone" | "name" | "company" | "message";
 
@@ -14,7 +15,7 @@ export type QuoteFormState = {
   values?: Record<Field, string> & { products: string[] };
 };
 
-/** Forwards the quote form to the docs site, which validates, stores and emails it. */
+/** Validates and stores the quote form, then emails the team (lib/inquiries.ts). */
 export async function submitQuote(_prev: QuoteFormState, formData: FormData): Promise<QuoteFormState> {
   // Honeypot: real visitors never see or fill this field.
   if (formData.get("website")) {
@@ -31,6 +32,7 @@ export async function submitQuote(_prev: QuoteFormState, formData: FormData): Pr
     products: formData.getAll("products").map(String),
   };
 
-  const res = await postInquiry("quote", { ...values, lang: text("lang") });
+  const lang = text("lang");
+  const res = await createQuote(values, isLocale(lang) ? lang : defaultLocale);
   return res.ok ? { ok: true } : { ok: false, error: res.error, errors: res.errors, values };
 }

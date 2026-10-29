@@ -21,9 +21,9 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { contact, DOCS_URL, moduleDocsIds, moduleKeys, telHref, type ModuleKey } from "@/content/common";
+import { DOCS_URL, moduleDocsIds, moduleKeys, telHref, type ModuleKey } from "@/content/common";
 import { HeroMockup } from "@/components/HeroMockup";
-import { content, getContent } from "@/lib/i18n";
+import { getContent, getContentFor } from "@/lib/content";
 import { isLocale, localeHref } from "@/lib/locale";
 
 const MODULE_ICONS: Record<ModuleKey, LucideIcon> = {
@@ -43,7 +43,7 @@ const MODULE_ICONS: Record<ModuleKey, LucideIcon> = {
 
 export async function generateMetadata({ params }: PageProps<"/[lang]">): Promise<Metadata> {
   const { lang } = await params;
-  const t = content[isLocale(lang) ? lang : "mn"];
+  const t = await getContentFor(lang);
   return {
     title: { absolute: t.meta.title },
     alternates: { canonical: localeHref(isLocale(lang) ? lang : "mn", "/"), languages: { mn: "/", en: "/en" } },
@@ -71,7 +71,7 @@ function SectionHeading({
 }
 
 export default async function Home() {
-  const { locale, t } = await getContent();
+  const { locale, t, contact } = await getContent();
   const quoteHref = localeHref(locale, "/une-sanal");
 
   return (

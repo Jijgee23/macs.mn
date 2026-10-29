@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { submitQuote, type QuoteFormState } from "./actions";
 import { quoteProductIds, type FormErrorCode } from "@/content/common";
 import { FieldError, FormSuccess, Honeypot, inputClass } from "@/components/FormParts";
-import type { SiteContent } from "@/content/types";
+import type { SiteContent } from "@/content/schema";
 import type { Locale } from "@/lib/locale";
 
 const initialState: QuoteFormState = { ok: false };

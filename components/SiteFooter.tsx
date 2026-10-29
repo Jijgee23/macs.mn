@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
-import { contact, DOCS_URL, telHref } from "@/content/common";
-import { getContent } from "@/lib/i18n";
+import { DOCS_URL, telHref } from "@/content/common";
+import { formatTagline, getContent } from "@/lib/content";
 import { localeHref } from "@/lib/locale";
 
 export async function SiteFooter() {
-  const { locale, t } = await getContent();
+  const { locale, t, contact } = await getContent();
   const mainPhone = contact.phones[0].number;
 
   return (
@@ -14,7 +14,7 @@ export async function SiteFooter() {
         <div>
           <Logo href={localeHref(locale, "/")} label={t.nav.home} />
           <p className="mt-4 max-w-xs text-muted">
-            {t.company.name} — {t.footer.tagline(contact.founded)}
+            {t.company.name} — {formatTagline(t.footer.tagline, contact.founded)}
           </p>
         </div>
         <div className="space-y-2.5">

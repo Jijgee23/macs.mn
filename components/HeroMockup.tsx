@@ -1,4 +1,4 @@
-import type { SiteContent } from "@/content/types";
+import type { SiteContent } from "@/content/schema";
 
 /** Decorative, illustrative app window for the hero — not real data. */
 const bars = [38, 52, 44, 61, 57, 70, 64, 78, 72, 86, 81, 94];

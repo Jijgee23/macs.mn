@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Clock, Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "./ContactForm";
-import { contact, telHref } from "@/content/common";
-import { content, getContent } from "@/lib/i18n";
+import { telHref } from "@/content/common";
+import { getContent, getContentFor } from "@/lib/content";
 import { isLocale, localeHref } from "@/lib/locale";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/holboo-barih">): Promise<Metadata> {
   const { lang } = await params;
   const locale = isLocale(lang) ? lang : "mn";
-  const t = content[locale];
+  const t = await getContentFor(locale);
   return {
     title: t.meta.contactTitle,
     description: t.meta.contactDescription,
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/holboo-bar
 }
 
 export default async function ContactPage() {
-  const { locale, t } = await getContent();
+  const { locale, t, contact } = await getContent();
   const p = t.contactPage;
 
   return (

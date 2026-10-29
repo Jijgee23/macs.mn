@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Clock, Mail, Phone } from "lucide-react";
 import { QuoteForm } from "./QuoteForm";
-import { contact, telHref } from "@/content/common";
-import { content, getContent } from "@/lib/i18n";
+import { telHref } from "@/content/common";
+import { getContent, getContentFor } from "@/lib/content";
 import { isLocale, localeHref } from "@/lib/locale";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/une-sanal">): Promise<Metadata> {
   const { lang } = await params;
   const locale = isLocale(lang) ? lang : "mn";
-  const t = content[locale];
+  const t = await getContentFor(locale);
   return {
     title: t.meta.quoteTitle,
     description: t.meta.quoteDescription,
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/une-sanal"
 }
 
 export default async function QuotePage() {
-  const { locale, t } = await getContent();
+  const { locale, t, contact } = await getContent();
   const mainPhone = contact.phones[0].number;
 
   return (

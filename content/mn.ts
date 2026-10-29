@@ -1,4 +1,4 @@
-import type { SiteContent } from "./types";
+import type { SiteContent } from "./schema";
 
 export const mn: SiteContent = {
   meta: {
@@ -234,7 +234,7 @@ export const mn: SiteContent = {
     secondary: "Асуулт, санал хүсэлт илгээх",
   },
   footer: {
-    tagline: (year) => `${year} оноос хойш санхүүгийн програм хангамж, автоматжуулалтын шийдэл.`,
+    tagline: "{year} оноос хойш санхүүгийн програм хангамж, автоматжуулалтын шийдэл.",
     contactTitle: "Холбоо барих",
     linksTitle: "Холбоосууд",
     docs: "Хэрэглэгчийн гарын авлага",

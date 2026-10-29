@@ -4,7 +4,7 @@ import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { DOCS_URL } from "@/content/common";
-import { getContent } from "@/lib/i18n";
+import { getContent } from "@/lib/content";
 import { localeHref } from "@/lib/locale";
 
 export async function SiteHeader() {

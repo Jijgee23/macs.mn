@@ -1,6 +1,9 @@
 ﻿# Deploy — macs.mn (103.143.40.48, same server as docs.macs.mn)
 
-macs.mn has **no database**. The quote and contact forms are forwarded server-to-server to the docs site (`macs_documents`, `POST /api/site/quote` and `/api/site/contact`), which validates and stores them, emails the team via Resend, and lists them at `docs.macs.mn/admin/requests` and `/admin/messages`.
+macs.mn has its own Postgres database `macs_site` holding:
+- **content** — every text on the site in MN and EN, edited at `macs.mn/admin/content` (`ContentSection`; `content/mn.ts` / `content/en.ts` are the seed and the fallback when the database is empty or unreachable),
+- **admins** — managed at `/admin/users`,
+- **quote requests and contact messages** — listed at `/admin/requests` and `/admin/messages`, with an email to `NOTIFY_TO` via Resend.
 
 The server runs every app under **pm2** (user `ubuntu`, Node 22 from nvm) behind **nginx** with certbot TLS:
 
@@ -12,28 +15,30 @@ The server runs every app under **pm2** (user `ubuntu`, Node 22 from nvm) behind
 > The system `/usr/bin/node` is v18, too old for Next 16. Always put nvm's Node 22 first in `PATH` before `npm`/`pm2` commands, especially `pm2 restart --update-env` (it copies your shell's PATH into the app):
 > `export PATH=$HOME/.nvm/versions/node/v22.21.1/bin:$PATH`
 
+## Database (once)
+
+```sql
+CREATE ROLE macs_site WITH LOGIN PASSWORD '…';
+CREATE DATABASE macs_site OWNER macs_site;
+```
+
+## `.env`
+
+See `.env.example`. On the server: `SITE_URL=https://macs.mn`, `DATABASE_URL` for the role above, a pinned `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (otherwise forms open during a deploy fail), and the Resend `SMTP_*` + `NOTIFY_TO`.
+
 ## First deploy
 
 ```bash
 export PATH=$HOME/.nvm/versions/node/v22.21.1/bin:$PATH
-git clone https://github.com/Jijgee23/macs.mn.git ~/macs.mn
 cd ~/macs.mn
-# .env — see below
 npm ci
+npm run db:migrate:deploy
+npm run db:seed-content          # fills missing sections only; never overwrites admin edits
+npm run db:seed-admin            # ADMIN_EMAIL / ADMIN_PASSWORD
 npm run build
 pm2 start npm --name macs_mn -- start -- -p 3030
 pm2 save
 ```
-
-`.env`:
-```
-SITE_URL=https://macs.mn
-DOCS_API_URL=http://127.0.0.1:3004
-SITE_API_KEY=<same value as SITE_API_KEY in ~/macs_documents/.env>
-NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=<openssl rand -base64 32>
-```
-- `DOCS_API_URL` reaches the docs app directly on this machine, skipping nginx and TLS.
-- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` must stay the same across builds, otherwise forms open during a deploy fail.
 
 ## nginx + TLS (needs sudo)
 
@@ -43,7 +48,7 @@ sudo ln -s /etc/nginx/sites-available/macs.mn /etc/nginx/sites-enabled/macs.mn
 sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d macs.mn -d www.macs.mn
 ```
-The nginx config overwrites `X-Forwarded-For` with the client address; the docs API rate-limits per IP on it.
+The nginx config overwrites `X-Forwarded-For` with the client address; the forms rate-limit per IP on it.
 
 ## Redeploys
 
@@ -52,10 +57,9 @@ export PATH=$HOME/.nvm/versions/node/v22.21.1/bin:$PATH
 cd ~/macs.mn
 git pull
 npm ci
+npm run db:migrate:deploy
 npm run build
 pm2 restart macs_mn --update-env
 ```
 
-## Checking the forms
-
-If a form shows "Түр алдаа гарлаа…", macs.mn couldn't reach the docs API. `pm2 logs macs_mn` shows `[inquiry] …` with the reason: missing `SITE_API_KEY`, a 401 (keys differ), or the docs app being down.
+Content is read from the database at build time and cached until an admin saves (`updateTag("content")`), so a rebuild doesn't lose edits. If the database is unreachable during a build, pages fall back to the built-in text until the next save or rebuild.

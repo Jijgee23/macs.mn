@@ -1,7 +1,8 @@
 "use server";
 
 import type { FormErrorCode } from "@/content/common";
-import { postInquiry } from "@/lib/docs-api";
+import { createContact } from "@/lib/inquiries";
+import { defaultLocale, isLocale } from "@/lib/locale";
 
 type Field = "name" | "email" | "phone" | "topic" | "message";
 
@@ -12,7 +13,7 @@ export type ContactFormState = {
   values?: Record<Field, string>;
 };
 
-/** Forwards the contact form to the docs site, which validates, stores and emails it. */
+/** Validates and stores the contact form, then emails the team (lib/inquiries.ts). */
 export async function submitContact(_prev: ContactFormState, formData: FormData): Promise<ContactFormState> {
   // Honeypot: real visitors never see or fill this field.
   if (formData.get("website")) {
@@ -28,6 +29,7 @@ export async function submitContact(_prev: ContactFormState, formData: FormData)
     message: text("message"),
   };
 
-  const res = await postInquiry("contact", { ...values, lang: text("lang") });
+  const lang = text("lang");
+  const res = await createContact(values, isLocale(lang) ? lang : defaultLocale);
   return res.ok ? { ok: true } : { ok: false, error: res.error, errors: res.errors, values };
 }
