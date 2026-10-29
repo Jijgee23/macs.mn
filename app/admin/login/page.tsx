@@ -14,7 +14,7 @@ const features = [
   { icon: PenLine, text: "Сайтын текстийг монгол, англиар засах" },
   { icon: Newspaper, text: "Мэдээ, зөвлөмж нийтэлж хуваалцах" },
   { icon: FileText, text: "Үнийн санал, санал хүсэлтэд хариу өгөх" },
-  { icon: Users, text: "Админуудыг удирдах" },
+  { icon: Users, text: "Админ эрхүүдийг удирдах" },
 ];
 
 export default function LoginPage({ searchParams }: PageProps<"/admin/login">) {
@@ -65,7 +65,7 @@ export default function LoginPage({ searchParams }: PageProps<"/admin/login">) {
             <LoginGate searchParams={searchParams} />
           </Suspense>
           <p className="mt-8 border-t border-line pt-5 text-xs leading-relaxed text-muted">
-            Нууц үгээ мартсан бол өөр админд хандаарай — «Админууд» хэсгээс таны нууц үгийг шинэчилж өгнө.
+            Нууц үгээ мартсан бол өөр админд хандаарай — «Админ эрхүүд» хэсгээс таны нууц үгийг шинэчилж өгнө.
           </p>
         </div>
       </main>

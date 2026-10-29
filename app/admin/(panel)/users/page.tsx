@@ -5,12 +5,12 @@ import { requireAdmin } from "@/lib/auth";
 import { dateFormat, Loading } from "@/components/admin/Requests";
 import { AddAdminForm, DeleteAdminButton, SetPasswordForm } from "./forms";
 
-export const metadata: Metadata = { title: "Админууд" };
+export const metadata: Metadata = { title: "Админ эрхүүд" };
 
 export default function UsersPage() {
   return (
     <>
-      <h1 className="text-2xl font-bold">Админууд</h1>
+      <h1 className="text-2xl font-bold">Админ эрхүүд</h1>
       <p className="mt-1 text-sm text-muted">Админ бүр контент засах, хүсэлт харах, бусад админыг удирдах эрхтэй.</p>
       <Suspense fallback={<Loading />}>
         <Users />

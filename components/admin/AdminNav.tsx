@@ -9,7 +9,7 @@ const links = [
   { href: "/admin/posts", label: "Нийтлэл" },
   { href: "/admin/requests", label: "Үнийн санал" },
   { href: "/admin/messages", label: "Санал хүсэлт" },
-  { href: "/admin/users", label: "Админууд" },
+  { href: "/admin/users", label: "Админ эрхүүд" },
 ];
 
 /** Highlights the current section; must sit inside <Suspense> (usePathname on dynamic routes). */
