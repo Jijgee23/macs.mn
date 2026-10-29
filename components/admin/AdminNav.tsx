@@ -7,6 +7,7 @@ const links = [
   { href: "/admin", label: "Хянах самбар" },
   { href: "/admin/content", label: "Контент" },
   { href: "/admin/posts", label: "Нийтлэл" },
+  { href: "/admin/content/faq", label: "FAQ" },
   { href: "/admin/requests", label: "Үнийн санал" },
   { href: "/admin/messages", label: "Санал хүсэлт" },
   { href: "/admin/users", label: "Админ эрхүүд" },
@@ -19,10 +20,13 @@ export function AdminNav() {
 
 /** Also the Suspense fallback, with an empty pathname (nothing highlighted). */
 export function AdminNavLinks({ pathname }: { pathname: string }) {
+  // The most specific matching link wins, so /admin/content/faq highlights FAQ, not Контент.
+  const matches = links.filter((l) => pathname === l.href || pathname.startsWith(`${l.href}/`));
+  const activeHref = matches.sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <nav className="-mb-px flex gap-1 overflow-x-auto text-sm" aria-label="Админ цэс">
       {links.map((l) => {
-        const active = l.href === "/admin" ? pathname === "/admin" : pathname.startsWith(l.href);
+        const active = l.href === activeHref;
         return (
           <Link
             key={l.href}

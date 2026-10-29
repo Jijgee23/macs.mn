@@ -128,7 +128,10 @@ export function ContentEditor({
             );
           }
           const str = String(v ?? "");
-          const long = locales.some((x) => String(getAt(values[x] as Json, path) ?? "").length > 70);
+          const longest = Math.max(...locales.map((x) => String(getAt(values[x] as Json, path) ?? "").length));
+          const long = longest > 70;
+          // Grow with the text (≈75 characters per line) so long answers don't need scrolling.
+          const rows = Math.min(12, Math.max(3, Math.ceil(longest / 75) + 1));
           const common = {
             value: str,
             lang: l === "all" ? undefined : l,
@@ -137,7 +140,7 @@ export function ContentEditor({
             className: inputClass,
           };
           return long ? (
-            <textarea key={l} rows={3} {...common} onChange={(e) => setLeaf(l, path, e.target.value)} />
+            <textarea key={l} rows={rows} {...common} onChange={(e) => setLeaf(l, path, e.target.value)} />
           ) : (
             <input key={l} {...common} onChange={(e) => setLeaf(l, path, e.target.value)} />
           );
