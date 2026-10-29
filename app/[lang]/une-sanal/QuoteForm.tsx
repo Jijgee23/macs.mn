@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { submitQuote, type QuoteFormState } from "./actions";
 import { quoteProductIds, type FormErrorCode } from "@/content/common";
 import { FieldError, FormSuccess, Honeypot, inputClass } from "@/components/FormParts";
+import { Recaptcha } from "@/components/Recaptcha";
 import type { SiteContent } from "@/content/schema";
 import type { Locale } from "@/lib/locale";
 
@@ -14,9 +15,10 @@ type Props = {
   t: SiteContent["quote"]["form"];
   success: SiteContent["quote"]["success"];
   errors: Record<FormErrorCode, string>;
+  recaptchaSiteKey: string | null;
 };
 
-export function QuoteForm({ locale, t, success, errors }: Props) {
+export function QuoteForm({ locale, t, success, errors, recaptchaSiteKey }: Props) {
   const [state, formAction, pending] = useActionState(submitQuote, initialState);
 
   if (state.ok) {
@@ -35,12 +37,11 @@ export function QuoteForm({ locale, t, success, errors }: Props) {
       <input type="hidden" name="lang" value={locale} />
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="block text-sm font-medium">
-          {t.email} <span className="text-brand">*</span>
+          {t.email}
           <input
             name="email"
             defaultValue={v?.email}
             type="email"
-            required
             autoComplete="email"
             className={inputClass}
             aria-invalid={!!e.email}
@@ -49,12 +50,11 @@ export function QuoteForm({ locale, t, success, errors }: Props) {
           <FieldError id="email-error" codes={e.email} messages={errors} />
         </label>
         <label className="block text-sm font-medium">
-          {t.phone} <span className="text-brand">*</span>
+          {t.phone}
           <input
             name="phone"
             defaultValue={v?.phone}
             type="tel"
-            required
             autoComplete="tel"
             placeholder={t.phonePlaceholder}
             className={inputClass}
@@ -86,6 +86,7 @@ export function QuoteForm({ locale, t, success, errors }: Props) {
           <FieldError id="company-error" codes={e.company} messages={errors} />
         </label>
       </div>
+      <p className="mt-3 text-xs text-muted">{t.contactHint}</p>
 
       <fieldset className="mt-6">
         <legend className="text-sm font-medium">{t.productsLegend}</legend>
@@ -122,6 +123,7 @@ export function QuoteForm({ locale, t, success, errors }: Props) {
       </label>
 
       <Honeypot />
+      {recaptchaSiteKey && <Recaptcha siteKey={recaptchaSiteKey} lang={locale} resetKey={state} />}
 
       {state.error && (
         <p className="mt-5 rounded-xl bg-brand-soft px-4 py-3 text-sm text-brand" role="alert">

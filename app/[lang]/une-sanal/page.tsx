@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Clock, Mail, Phone } from "lucide-react";
 import { QuoteForm } from "./QuoteForm";
 import { telHref } from "@/content/common";
+import { recaptchaSiteKey } from "@/lib/recaptcha";
 import { getContent, getContentFor } from "@/lib/content";
 import { isLocale, localeHref } from "@/lib/locale";
 
@@ -63,7 +64,7 @@ export default async function QuotePage() {
             </p>
           </div>
         </div>
-        <QuoteForm locale={locale} t={t.quote.form} success={t.quote.success} errors={t.formErrors} />
+        <QuoteForm locale={locale} t={t.quote.form} success={t.quote.success} errors={t.formErrors} recaptchaSiteKey={recaptchaSiteKey()} />
       </div>
     </div>
   );

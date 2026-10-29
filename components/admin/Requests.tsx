@@ -133,12 +133,17 @@ export function RequestCard({
   );
 }
 
-export function ContactLinks({ email, phone }: { email: string; phone?: string | null }) {
+export function ContactLinks({ email, phone }: { email?: string | null; phone?: string | null }) {
+  if (!email && !phone) {
+    return <p className="mt-3 text-sm text-muted">Холбоо барих мэдээлэл үлдээгээгүй</p>;
+  }
   return (
     <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-      <a href={`mailto:${email}`} className="text-brand hover:underline">
-        {email}
-      </a>
+      {email && (
+        <a href={`mailto:${email}`} className="text-brand hover:underline">
+          {email}
+        </a>
+      )}
       {phone && (
         <a href={telHref(phone)} className="text-brand hover:underline">
           {phone}

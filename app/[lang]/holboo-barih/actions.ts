@@ -30,6 +30,6 @@ export async function submitContact(_prev: ContactFormState, formData: FormData)
   };
 
   const lang = text("lang");
-  const res = await createContact(values, isLocale(lang) ? lang : defaultLocale);
+  const res = await createContact(values, isLocale(lang) ? lang : defaultLocale, text("g-recaptcha-response"));
   return res.ok ? { ok: true } : { ok: false, error: res.error, errors: res.errors, values };
 }

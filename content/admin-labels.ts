@@ -100,7 +100,7 @@ export const fieldLabels: Record<string, string> = {
   form: "Форм",
   phone: "Утас",
   phonePlaceholder: "Утасны жишээ",
-  phoneHint: "Утасны тайлбар",
+  contactHint: "Имэйл/утасны тайлбар (CC хуулбар)",
   company: "Байгууллага",
   productsLegend: "Бүтээгдэхүүний сонголтын гарчиг",
   products: "Бүтээгдэхүүний сонголтууд",
@@ -123,6 +123,7 @@ export const fieldLabels: Record<string, string> = {
   invalidPhone: "Утас буруу",
   tooLong: "Хэт урт",
   rateLimited: "Хэт олон хүсэлт",
+  captcha: "reCAPTCHA",
   unavailable: "Түр алдаа",
   // meta / nav
   ogLocale: "OG locale",

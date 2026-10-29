@@ -3,7 +3,7 @@
 macs.mn has its own Postgres database `macs_site` holding:
 - **content** — every text on the site in MN and EN, edited at `macs.mn/admin/content` (`ContentSection`; `content/mn.ts` / `content/en.ts` are the seed and the fallback when the database is empty or unreachable),
 - **admins** — managed at `/admin/users`,
-- **quote requests and contact messages** — listed at `/admin/requests` and `/admin/messages`, with an email to `NOTIFY_TO` via Resend.
+- **quote requests and contact messages** — listed at `/admin/requests` and `/admin/messages`. Each one is emailed from `no_reply@infosystems.mn` (smtp.mail.mn) to `NOTIFY_TO` (contact@infosystems.mn), with the visitor in CC as their confirmation. Spam protection: reCAPTCHA v2, a honeypot field and 3 requests / 10 min per IP.
 
 The server runs every app under **pm2** (user `ubuntu`, Node 22 from nvm) behind **nginx** with certbot TLS:
 
@@ -24,7 +24,7 @@ CREATE DATABASE macs_site OWNER macs_site;
 
 ## `.env`
 
-See `.env.example`. On the server: `SITE_URL=https://macs.mn`, `DATABASE_URL` for the role above, a pinned `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (otherwise forms open during a deploy fail), and the Resend `SMTP_*` + `NOTIFY_TO`.
+See `.env.example`. On the server: `SITE_URL=https://macs.mn`, `DATABASE_URL` for the role above, a pinned `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (otherwise forms open during a deploy fail), the `SMTP_*` + `NOTIFY_TO` settings and the reCAPTCHA keys. Quote `SMTP_PASS` if it contains `#`.
 
 ## First deploy
 

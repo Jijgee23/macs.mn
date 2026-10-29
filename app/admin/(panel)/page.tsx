@@ -75,9 +75,9 @@ async function Dashboard() {
             {quotes.map((q) => (
               <li key={q.id} className="flex items-center justify-between gap-3 py-2.5">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{q.company ?? q.name ?? q.email}</span>
+                  <span className="block truncate font-medium">{q.company ?? q.name ?? q.email ?? q.phone ?? "Нэргүй"}</span>
                   <span className="block truncate text-xs text-muted">
-                    {q.products.map(label.product).join(", ") || q.email}
+                    {q.products.map(label.product).join(", ") || q.email || q.phone}
                   </span>
                 </span>
                 <StatusBadge status={q.status} />
@@ -96,7 +96,7 @@ async function Dashboard() {
             {messages.map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-3 py-2.5">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{m.name ?? m.email}</span>
+                  <span className="block truncate font-medium">{m.name ?? m.email ?? m.phone ?? "Нэргүй"}</span>
                   <span className="block truncate text-xs text-muted">{label.topic(m.topic)}</span>
                 </span>
                 <StatusBadge status={m.status} />

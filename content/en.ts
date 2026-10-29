@@ -253,6 +253,7 @@ export const en: SiteContent = {
       email: "Email",
       phone: "Phone",
       phonePlaceholder: "+976 9911 2233",
+      contactHint: "Leave your email or phone if you'd like a reply. If you enter your email, you'll receive a copy of your request.",
       name: "Name",
       company: "Organization",
       productsLegend: "Systems you are interested in",
@@ -290,7 +291,7 @@ export const en: SiteContent = {
       name: "Name",
       email: "Email",
       phone: "Phone",
-      phoneHint: "optional",
+      contactHint: "Leave your email or phone if you'd like a reply. If you enter your email, you'll receive a copy of your request.",
       topic: "Topic",
       topics: {
         general: "General question",
@@ -312,6 +313,7 @@ export const en: SiteContent = {
     invalidPhone: "Please enter a valid phone number",
     tooLong: "This is too long",
     rateLimited: "Please wait a moment and try again, or give us a call.",
+    captcha: "Please tick “I'm not a robot” and send again.",
     unavailable: "Something went wrong. Please try again or call +976 7012 6399.",
   },
 };

@@ -33,6 +33,6 @@ export async function submitQuote(_prev: QuoteFormState, formData: FormData): Pr
   };
 
   const lang = text("lang");
-  const res = await createQuote(values, isLocale(lang) ? lang : defaultLocale);
+  const res = await createQuote(values, isLocale(lang) ? lang : defaultLocale, text("g-recaptcha-response"));
   return res.ok ? { ok: true } : { ok: false, error: res.error, errors: res.errors, values };
 }

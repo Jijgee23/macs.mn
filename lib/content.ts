@@ -13,6 +13,19 @@ export const CONTENT_TAG = "content";
 
 export const fallbackContent: Record<Locale, SiteContent> = { mn, en };
 
+/**
+ * Overlays saved content on the built-in content: objects merge key by key, anything
+ * else (strings, lists) comes from the database. Keys added to the built-in content
+ * after a section was saved (e.g. a new form error) thus keep their default.
+ */
+export function overlay(base: unknown, saved: unknown): unknown {
+  const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+  if (!isObj(base) || !isObj(saved)) return saved === undefined ? base : saved;
+  const out: Record<string, unknown> = { ...base };
+  for (const [k, v] of Object.entries(saved)) out[k] = overlay(base[k], v);
+  return out;
+}
+
 type AllContent = { content: Record<Locale, SiteContent>; contact: ContactInfo };
 
 /**
@@ -37,13 +50,13 @@ export async function loadAllContent(): Promise<AllContent> {
 
   for (const row of rows) {
     if (row.key === "contact" && row.locale === "all") {
-      const parsed = contactInfoSchema.safeParse(row.data);
+      const parsed = contactInfoSchema.safeParse(overlay(defaultContactInfo, row.data));
       if (parsed.success) contact = parsed.data;
       continue;
     }
     if (!isLocale(row.locale) || !(row.key in sectionSchemas)) continue;
     const key = row.key as SectionKey;
-    const parsed = sectionSchemas[key].safeParse(row.data);
+    const parsed = sectionSchemas[key].safeParse(overlay(fallbackContent[row.locale][key], row.data));
     if (parsed.success) {
       (content[row.locale] as Record<SectionKey, unknown>)[key] = parsed.data;
     } else {

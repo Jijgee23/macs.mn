@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { fallbackContent } from "@/lib/content";
+import { fallbackContent, overlay } from "@/lib/content";
 import { adminSections } from "@/content/admin-labels";
 import { defaultContactInfo } from "@/content/common";
 import type { SectionKey } from "@/content/schema";
@@ -50,13 +50,13 @@ async function Editor({ params }: { params: PageProps<"/admin/content/[section]"
   const row = (locale: string) => rows.find((r) => r.locale === locale);
   const latest = rows.toSorted((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
 
-  // Sections not yet in the database start from the built-in text.
+  // Sections (or keys) not yet in the database start from the built-in text.
   const initial =
     section === "contact"
-      ? { all: orderLike(row("all")?.data ?? defaultContactInfo, defaultContactInfo) }
+      ? { all: orderLike(overlay(defaultContactInfo, row("all")?.data), defaultContactInfo) }
       : {
-          mn: orderLike(row("mn")?.data ?? fallbackContent.mn[section as SectionKey], fallbackContent.mn[section as SectionKey]),
-          en: orderLike(row("en")?.data ?? fallbackContent.en[section as SectionKey], fallbackContent.mn[section as SectionKey]),
+          mn: orderLike(overlay(fallbackContent.mn[section as SectionKey], row("mn")?.data), fallbackContent.mn[section as SectionKey]),
+          en: orderLike(overlay(fallbackContent.en[section as SectionKey], row("en")?.data), fallbackContent.mn[section as SectionKey]),
         };
 
   return (

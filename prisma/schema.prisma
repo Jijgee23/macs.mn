@@ -39,8 +39,8 @@ model QuoteRequest {
   id        String        @id @default(cuid())
   name      String?
   company   String?
-  email     String
-  phone     String
+  email     String?
+  phone     String?
   /** Ids from quoteProductIds in content/common.ts */
   products  String[]
   message   String?
@@ -60,7 +60,7 @@ model QuoteRequest {
 model ContactMessage {
   id        String        @id @default(cuid())
   name      String?
-  email     String
+  email     String?
   phone     String?
   /** One of contactTopics in content/common.ts */
   topic     String

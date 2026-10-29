@@ -4,10 +4,15 @@ import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { notifyNewContact, notifyNewQuote } from "@/lib/mail";
+import { verifyRecaptcha } from "@/lib/recaptcha";
 import { contactTopics, quoteProductIds, type FormErrorCode } from "@/content/common";
 import type { Locale } from "@/lib/locale";
 
-/** Validation, rate limiting and storage for the quote and contact forms. */
+/**
+ * Spam checks (reCAPTCHA, then per-IP rate limit; the honeypot is checked in the
+ * actions), validation and storage for the quote and contact forms. Email and phone
+ * are both optional.
+ */
 
 export type InquiryResult = {
   ok: boolean;
@@ -23,13 +28,17 @@ const code = (c: FormErrorCode) => c;
 const optionalText = (max: number) =>
   z.string().trim().max(max, code("tooLong")).transform((v) => v || null);
 const requiredText = (max: number) => z.string().trim().min(1, code("required")).max(max, code("tooLong"));
-const email = z.string().trim().toLowerCase().pipe(z.email(code("invalidEmail")));
+const optionalEmail = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .refine((v) => v === "" || z.email().safeParse(v).success, code("invalidEmail"))
+  .transform((v) => v || null);
 
 const isPhone = (v: string) => {
   const digits = v.replace(/\D/g, "").length;
   return /^[+\d][\d\s-]*$/.test(v) && digits >= 8 && digits <= 15;
 };
-const phone = z.string().trim().refine(isPhone, code("invalidPhone"));
 const optionalPhone = z
   .string()
   .trim()
@@ -37,8 +46,8 @@ const optionalPhone = z
   .transform((v) => v || null);
 
 const quoteSchema = z.object({
-  email,
-  phone,
+  email: optionalEmail,
+  phone: optionalPhone,
   name: optionalText(120),
   company: optionalText(200),
   message: optionalText(2000),
@@ -47,7 +56,7 @@ const quoteSchema = z.object({
 
 const contactSchema = z.object({
   name: optionalText(120),
-  email,
+  email: optionalEmail,
   phone: optionalPhone,
   topic: z.enum(contactTopics).catch("general"),
   message: requiredText(4000),
@@ -64,12 +73,14 @@ function invalid(error: z.ZodError): InquiryResult {
   return { ok: false, errors: z.flattenError(error).fieldErrors as InquiryResult["errors"] };
 }
 
-export async function createQuote(input: unknown, locale: Locale): Promise<InquiryResult> {
+export async function createQuote(input: unknown, locale: Locale, captchaToken: string): Promise<InquiryResult> {
+  const ip = await clientIp();
+  if (!(await verifyRecaptcha(captchaToken, ip))) return { ok: false, error: "captcha" };
+
   const parsed = quoteSchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
 
   try {
-    const ip = await clientIp();
     if (ip && (await db.quoteRequest.count({ where: { ip, createdAt: { gte: since() } } })) >= RATE_LIMIT_MAX) {
       return { ok: false, error: "rateLimited" };
     }
@@ -82,12 +93,14 @@ export async function createQuote(input: unknown, locale: Locale): Promise<Inqui
   }
 }
 
-export async function createContact(input: unknown, locale: Locale): Promise<InquiryResult> {
+export async function createContact(input: unknown, locale: Locale, captchaToken: string): Promise<InquiryResult> {
+  const ip = await clientIp();
+  if (!(await verifyRecaptcha(captchaToken, ip))) return { ok: false, error: "captcha" };
+
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
 
   try {
-    const ip = await clientIp();
     if (ip && (await db.contactMessage.count({ where: { ip, createdAt: { gte: since() } } })) >= RATE_LIMIT_MAX) {
       return { ok: false, error: "rateLimited" };
     }

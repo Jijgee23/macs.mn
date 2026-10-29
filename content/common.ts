@@ -80,6 +80,14 @@ export type ContactTopic = (typeof contactTopics)[number];
  * Validation codes returned by the form Server Actions and translated by the forms;
  * "unavailable" means the request couldn't be saved.
  */
-export const formErrorCodes = ["required", "invalidEmail", "invalidPhone", "tooLong", "rateLimited", "unavailable"] as const;
+export const formErrorCodes = [
+  "required",
+  "invalidEmail",
+  "invalidPhone",
+  "tooLong",
+  "rateLimited",
+  "captcha",
+  "unavailable",
+] as const;
 
 export type FormErrorCode = (typeof formErrorCodes)[number];

@@ -22,19 +22,19 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-line bg-bg/80 backdrop-blur-xl">
       <div className="container-wide flex h-16 items-center justify-between gap-4">
         <Logo href={localeHref(locale, "/")} label={t.nav.home} />
-        <nav className="hidden items-center gap-1 text-sm lg:flex" aria-label={t.nav.mainNav}>
+        <nav className="hidden items-center gap-1 text-sm xl:flex" aria-label={t.nav.mainNav}>
           {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-soft hover:text-ink"
+              className="rounded-full px-3 py-1.5 whitespace-nowrap text-muted transition-colors hover:bg-soft hover:text-ink"
             >
               {item.label}
             </Link>
           ))}
           <a
             href={DOCS_URL}
-            className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-soft hover:text-ink"
+            className="rounded-full px-3 py-1.5 whitespace-nowrap text-muted transition-colors hover:bg-soft hover:text-ink"
           >
             {t.nav.docs}
           </a>
@@ -44,11 +44,11 @@ export async function SiteHeader() {
           <ThemeToggle label={t.nav.theme} />
           <Link
             href={quoteHref}
-            className="hidden rounded-full bg-cta px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-cta-hover sm:inline-flex"
+            className="hidden rounded-full bg-cta px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-cta-hover sm:inline-flex"
           >
             {t.nav.quote}
           </Link>
-          <details className="group relative lg:hidden">
+          <details className="group relative xl:hidden">
             <summary
               className="flex size-9 cursor-pointer list-none items-center justify-center rounded-full border border-line text-muted hover:text-ink [&::-webkit-details-marker]:hidden"
               aria-label={t.nav.menu}

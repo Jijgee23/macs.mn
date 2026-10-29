@@ -37,7 +37,7 @@ async function QuoteList({ searchParams }: { searchParams: PageProps<"/admin/req
       ) : (
         <ul className="mt-6 grid gap-4 xl:grid-cols-2">
           {quotes.map((q) => (
-            <RequestCard key={q.id} kind="quote" item={q} title={q.company ?? q.name ?? q.email} subtitle={q.company ? q.name : null}>
+            <RequestCard key={q.id} kind="quote" item={q} title={q.company ?? q.name ?? q.email ?? q.phone ?? "Нэргүй"} subtitle={q.company ? q.name : null}>
               <ContactLinks email={q.email} phone={q.phone} />
               {q.products.length > 0 && (
                 <ul className="mt-3 flex flex-wrap gap-1.5">

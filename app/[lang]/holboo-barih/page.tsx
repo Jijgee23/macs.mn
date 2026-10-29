@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Clock, Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "./ContactForm";
 import { telHref } from "@/content/common";
+import { recaptchaSiteKey } from "@/lib/recaptcha";
 import { getContent, getContentFor } from "@/lib/content";
 import { isLocale, localeHref } from "@/lib/locale";
 
@@ -86,7 +87,7 @@ export default async function ContactPage() {
             </Link>
           </div>
         </div>
-        <ContactForm locale={locale} t={p.form} success={p.success} errors={t.formErrors} />
+        <ContactForm locale={locale} t={p.form} success={p.success} errors={t.formErrors} recaptchaSiteKey={recaptchaSiteKey()} />
       </div>
     </div>
   );

@@ -37,7 +37,7 @@ async function MessageList({ searchParams }: { searchParams: PageProps<"/admin/m
       ) : (
         <ul className="mt-6 grid gap-4 xl:grid-cols-2">
           {messages.map((m) => (
-            <RequestCard key={m.id} kind="contact" item={m} title={m.name ?? m.email} subtitle={label.topic(m.topic)}>
+            <RequestCard key={m.id} kind="contact" item={m} title={m.name ?? m.email ?? m.phone ?? "Нэргүй"} subtitle={label.topic(m.topic)}>
               <ContactLinks email={m.email} phone={m.phone} />
               <p className="mt-3 text-sm whitespace-pre-line">{m.message}</p>
             </RequestCard>
