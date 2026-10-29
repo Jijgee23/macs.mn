@@ -4,6 +4,7 @@ import type { ContactMessage, QuoteRequest } from "@prisma/client";
 import type { ContactTopic, QuoteProductId } from "@/content/common";
 import { loadAllContent } from "@/lib/content";
 import { isLocale, type Locale } from "@/lib/locale";
+import { renderHtml, renderText, type MailModel } from "@/lib/mail-template";
 
 /**
  * One email per request: from SMTP_FROM (no_reply@infosystems.mn) to NOTIFY_TO
@@ -36,12 +37,14 @@ export async function inquiryLabels(locale: Locale = "mn") {
   };
 }
 
-const copy = {
+export const mailCopy = {
   mn: {
-    quoteSubject: "Үнийн саналын хүсэлт",
-    received: (hours: string) =>
-      `Сайн байна уу,\n\nТаны хүсэлтийг хүлээн авлаа. Манай мэргэжилтэн ажлын цагаар (${hours}) тантай удахгүй холбогдоно.`,
-    yours: "Таны илгээсэн мэдээлэл:",
+    quoteKind: "Үнийн саналын хүсэлт",
+    contactKind: "Санал хүсэлт",
+    title: "Таны хүсэлтийг хүлээн авлаа",
+    intro: (hours: string) =>
+      `Сайн байна уу, MACS ERP-д хандсанд баярлалаа. Манай мэргэжилтэн ажлын цагаар (${hours}) тантай удахгүй холбогдоно.`,
+    yours: "Таны илгээсэн мэдээлэл",
     name: "Нэр",
     company: "Байгууллага",
     email: "Имэйл",
@@ -50,13 +53,15 @@ const copy = {
     topic: "Сэдэв",
     message: "Мессеж",
     regards: "Хүндэтгэсэн,",
-    noReply: "Энэ мэйл автоматаар илгээгдсэн тул хариу бичих шаардлагагүй.",
+    noReply: "Энэ мэйл автоматаар илгээгдсэн. Асуух зүйл байвал дээрх утас эсвэл имэйлээр холбогдоно уу.",
   },
   en: {
-    quoteSubject: "Price quote request",
-    received: (hours: string) =>
-      `Hello,\n\nWe have received your request. Our specialist will contact you soon during business hours (${hours}).`,
-    yours: "Your submission:",
+    quoteKind: "Price quote request",
+    contactKind: "Message",
+    title: "We've received your request",
+    intro: (hours: string) =>
+      `Hello, thank you for contacting MACS ERP. Our specialist will get back to you soon during business hours (${hours}).`,
+    yours: "Your submission",
     name: "Name",
     company: "Organization",
     email: "Email",
@@ -65,20 +70,31 @@ const copy = {
     topic: "Topic",
     message: "Message",
     regards: "Best regards,",
-    noReply: "This is an automated message sent from a no-reply address.",
+    noReply: "This is an automated message. For questions, please use the phone or email above.",
   },
 } as const;
 
 const localeOf = (l: string): Locale => (isLocale(l) ? l : "mn");
-const line = (label: string, value: string | null | undefined) => `${label}: ${value?.trim() || "—"}`;
+const siteUrl = () => (process.env.SITE_URL ?? "https://macs.mn").replace(/\/$/, "");
 
-function signoff(c: (typeof copy)[Locale], label: Awaited<ReturnType<typeof inquiryLabels>>) {
-  const phone = label.contact.phones[0]?.number;
-  return [c.regards, label.company.name, [phone, label.contact.email, "macs.mn"].filter(Boolean).join(" · ")].join("\n");
+function baseModel(locale: Locale, kicker: string, label: Awaited<ReturnType<typeof inquiryLabels>>) {
+  const c = mailCopy[locale];
+  return {
+    lang: locale,
+    kicker,
+    title: c.title,
+    intro: c.intro(label.company.hours),
+    sectionTitle: c.yours,
+    regards: c.regards,
+    company: label.company.name,
+    contactLine: [label.contact.phones[0]?.number, label.contact.email].filter((v): v is string => !!v),
+    siteUrl: siteUrl(),
+    footnote: c.noReply,
+  };
 }
 
 /** Never throws — the request is already saved and listed in /admin. */
-async function send(id: string, subject: string, text: string, visitorEmail: string | null) {
+async function send(id: string, subject: string, model: MailModel, visitorEmail: string | null) {
   const mailer = transport();
   const to = process.env.NOTIFY_TO;
   if (!mailer || !to) {
@@ -92,7 +108,8 @@ async function send(id: string, subject: string, text: string, visitorEmail: str
       cc: visitorEmail ?? undefined,
       replyTo: visitorEmail ?? undefined,
       subject,
-      text,
+      text: renderText(model),
+      html: renderHtml(model),
     });
   } catch (err) {
     console.error(`[notify] failed to email ${id}`, err);
@@ -101,45 +118,37 @@ async function send(id: string, subject: string, text: string, visitorEmail: str
 
 export async function notifyNewQuote(quote: QuoteRequest) {
   const locale = localeOf(quote.locale);
-  const c = copy[locale];
+  const c = mailCopy[locale];
   const label = await inquiryLabels(locale);
-  const text = [
-    c.received(label.company.hours),
-    "",
-    c.yours,
-    line(c.name, quote.name),
-    line(c.company, quote.company),
-    line(c.email, quote.email),
-    line(c.phone, quote.phone),
-    line(c.products, quote.products.map(label.product).join(", ")),
-    line(c.message, quote.message),
-    "",
-    signoff(c, label),
-    "",
-    c.noReply,
-  ].join("\n");
+  const model: MailModel = {
+    ...baseModel(locale, c.quoteKind, label),
+    fields: [
+      { label: c.name, value: quote.name },
+      { label: c.company, value: quote.company },
+      { label: c.email, value: quote.email },
+      { label: c.phone, value: quote.phone },
+      { label: c.products, value: quote.products.map(label.product).join(", ") },
+    ],
+    message: { label: c.message, value: quote.message },
+  };
   const who = quote.company ?? quote.name ?? quote.email ?? quote.phone;
-  await send(`quote ${quote.id}`, `${c.quoteSubject}${who ? ` — ${who}` : ""} · MACS ERP`, text, quote.email);
+  await send(`quote ${quote.id}`, `${c.quoteKind}${who ? ` — ${who}` : ""} · MACS ERP`, model, quote.email);
 }
 
 export async function notifyNewContact(message: ContactMessage) {
   const locale = localeOf(message.locale);
-  const c = copy[locale];
+  const c = mailCopy[locale];
   const label = await inquiryLabels(locale);
-  const text = [
-    c.received(label.company.hours),
-    "",
-    c.yours,
-    line(c.name, message.name),
-    line(c.email, message.email),
-    line(c.phone, message.phone),
-    line(c.topic, label.topic(message.topic)),
-    line(c.message, message.message),
-    "",
-    signoff(c, label),
-    "",
-    c.noReply,
-  ].join("\n");
+  const model: MailModel = {
+    ...baseModel(locale, label.topic(message.topic), label),
+    fields: [
+      { label: c.name, value: message.name },
+      { label: c.email, value: message.email },
+      { label: c.phone, value: message.phone },
+      { label: c.topic, value: label.topic(message.topic) },
+    ],
+    message: { label: c.message, value: message.message },
+  };
   const who = message.name ?? message.email ?? message.phone;
-  await send(`contact ${message.id}`, `${label.topic(message.topic)}${who ? ` — ${who}` : ""} · MACS ERP`, text, message.email);
+  await send(`contact ${message.id}`, `${label.topic(message.topic)}${who ? ` — ${who}` : ""} · MACS ERP`, model, message.email);
 }
