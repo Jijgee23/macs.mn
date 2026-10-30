@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { contactTopics, formErrorCodes, moduleKeys, phoneKinds, quoteProductIds } from "./common";
+import {
+  contactTopics,
+  formErrorCodes,
+  moduleKeys,
+  phoneKinds,
+  quoteProductIds,
+  supportTypes,
+  supportUrgencies,
+} from "./common";
 
 /**
  * Shape of all editable site content. Each top-level key is one row per locale in
@@ -152,6 +160,8 @@ export const sectionSchemas = {
     intro: text,
     quoteHint: text,
     quoteLink: text,
+    supportHint: text,
+    supportLink: text,
     addressTitle: text,
     phonesTitle: text,
     emailTitle: text,
@@ -166,6 +176,31 @@ export const sectionSchemas = {
       topics: fixedKeys(contactTopics, text),
       message: text,
       messagePlaceholder: text,
+      submit: text,
+      submitting: text,
+      privacy: text,
+    }),
+  }),
+  supportPage: z.object({
+    eyebrow: text,
+    title: text,
+    intro: text,
+    points: z.array(text),
+    success: z.object({ title: text, body: text }),
+    form: z.object({
+      company: text,
+      name: text,
+      phone: text,
+      emails: text,
+      emailsHint: text,
+      type: text,
+      types: fixedKeys(supportTypes, text),
+      urgency: text,
+      urgencies: fixedKeys(supportUrgencies, text),
+      message: text,
+      messagePlaceholder: text,
+      files: text,
+      filesHint: text,
       submit: text,
       submitting: text,
       privacy: text,

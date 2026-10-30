@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowDown, ArrowRight, CircleCheck, Clock, Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "./ContactForm";
+import { SupportForm } from "./SupportForm";
 import { telHref } from "@/content/common";
 import { recaptchaSiteKey } from "@/lib/recaptcha";
 import { getContent, getContentFor } from "@/lib/content";
@@ -24,6 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/holboo-bar
 export default async function ContactPage() {
   const { locale, t, contact } = await getContent();
   const p = t.contactPage;
+  const s = t.supportPage;
 
   return (
     <div className="relative">
@@ -86,9 +88,35 @@ export default async function ContactPage() {
               <ArrowRight className="size-3.5" aria-hidden />
             </Link>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-line bg-soft px-5 py-4 text-sm">
+            <span className="text-muted">{p.supportHint}</span>
+            <a href="#macs-hereglegch" className="inline-flex items-center gap-1 font-semibold text-brand hover:underline">
+              {p.supportLink}
+              <ArrowDown className="size-3.5" aria-hidden />
+            </a>
+          </div>
         </div>
         <ContactForm locale={locale} t={p.form} success={p.success} errors={t.formErrors} recaptchaSiteKey={recaptchaSiteKey()} />
       </div>
+
+      <section id="macs-hereglegch" className="scroll-mt-20 border-t border-line bg-soft">
+        <div className="container-wide grid gap-12 py-14 sm:py-20 lg:grid-cols-[1fr_1.35fr]">
+          <div>
+            <p className="text-sm font-semibold text-brand">{s.eyebrow}</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-[-0.03em] text-balance sm:text-4xl">{s.title}</h2>
+            <p className="mt-5 text-lg text-muted text-pretty">{s.intro}</p>
+            <ul className="mt-8 space-y-3 text-sm">
+              {s.points.map((point) => (
+                <li key={point} className="flex gap-3">
+                  <CircleCheck className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <SupportForm locale={locale} t={s.form} success={s.success} errors={t.formErrors} recaptchaSiteKey={recaptchaSiteKey()} />
+        </div>
+      </section>
     </div>
   );
 }

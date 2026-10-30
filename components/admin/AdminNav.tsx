@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/content/faq", label: "FAQ" },
   { href: "/admin/requests", label: "Үнийн санал" },
   { href: "/admin/messages", label: "Санал хүсэлт" },
+  { href: "/admin/support", label: "Хэрэглэгчийн хүсэлт" },
   { href: "/admin/users", label: "Админ эрхүүд" },
 ];
 

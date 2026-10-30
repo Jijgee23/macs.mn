@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FileText, MessageSquare, PenLine } from "lucide-react";
+import { FileText, LifeBuoy, MessageSquare, PenLine } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { inquiryLabels } from "@/lib/mail";
 import { adminSections } from "@/content/admin-labels";
 import { dateFormat, Loading, StatusBadge } from "@/components/admin/Requests";
+import { SupportStatusBadge } from "@/components/admin/SupportRequests";
 
 export const metadata: Metadata = { title: "Хянах самбар" };
 
@@ -23,11 +24,13 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const admin = await requireAdmin();
-  const [newQuotes, newMessages, quotes, messages, recentEdits, label] = await Promise.all([
+  const [newQuotes, newMessages, newSupport, quotes, messages, support, recentEdits, label] = await Promise.all([
     db.quoteRequest.count({ where: { status: "NEW" } }),
     db.contactMessage.count({ where: { status: "NEW" } }),
+    db.supportRequest.count({ where: { status: "NEW" } }),
     db.quoteRequest.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
     db.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+    db.supportRequest.findMany({ orderBy: { createdAt: "desc" }, take: 5, omit: { message: true } }),
     db.contentSection.findMany({
       where: { NOT: { updatedBy: "seed" } },
       orderBy: { updatedAt: "desc" },
@@ -43,13 +46,14 @@ async function Dashboard() {
   const tiles = [
     { href: "/admin/requests?status=NEW", label: "Шинэ үнийн санал", value: newQuotes, icon: FileText },
     { href: "/admin/messages?status=NEW", label: "Шинэ санал хүсэлт", value: newMessages, icon: MessageSquare },
+    { href: "/admin/support?status=NEW", label: "Шинэ хэрэглэгчийн хүсэлт", value: newSupport, icon: LifeBuoy },
   ];
 
   return (
     <>
       <p className="mt-1 text-sm text-muted">Сайн байна уу, {admin.name ?? admin.email}.</p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
         {tiles.map((t) => (
           <Link
             key={t.href}
@@ -67,7 +71,7 @@ async function Dashboard() {
         ))}
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-3">
+      <div className="mt-8 grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
         <section className="rounded-2xl border border-line bg-surface p-5">
           <h2 className="font-semibold">Сүүлийн үнийн санал</h2>
           <ul className="mt-3 divide-y divide-line text-sm">
@@ -104,6 +108,27 @@ async function Dashboard() {
             ))}
           </ul>
           <Link href="/admin/messages" className="mt-3 inline-block text-sm text-brand hover:underline">
+            Бүгдийг харах →
+          </Link>
+        </section>
+
+        <section className="rounded-2xl border border-line bg-surface p-5">
+          <h2 className="font-semibold">Сүүлийн хэрэглэгчийн хүсэлт</h2>
+          <ul className="mt-3 divide-y divide-line text-sm">
+            {support.length === 0 && <li className="py-3 text-muted">Хүсэлт алга.</li>}
+            {support.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{r.company}</span>
+                  <span className="block truncate text-xs text-muted">
+                    {label.supportType(r.type)} · {label.urgency(r.urgency)}
+                  </span>
+                </span>
+                <SupportStatusBadge status={r.status} />
+              </li>
+            ))}
+          </ul>
+          <Link href="/admin/support" className="mt-3 inline-block text-sm text-brand hover:underline">
             Бүгдийг харах →
           </Link>
         </section>

@@ -77,6 +77,58 @@ model ContactMessage {
   @@index([ip, createdAt])
 }
 
+/** Workflow of a request from an existing MACS customer; every change can be emailed to them. */
+enum SupportStatus {
+  NEW
+  RECEIVED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+/** Request from an existing MACS customer («Та MACS хэрэглэгч бол» on /holboo-barih). */
+model SupportRequest {
+  id          String              @id @default(cuid())
+  company     String
+  name        String?
+  phone       String
+  /** Addresses that receive the confirmation and every status update */
+  emails      String[]
+  /** One of supportTypes in content/common.ts */
+  type        String
+  /** One of supportUrgencies in content/common.ts */
+  urgency     String
+  message     String
+  status      SupportStatus       @default(NEW)
+  /** Internal note, never sent to the customer */
+  note        String?
+  /** Last explanation sent to the customer with a status update */
+  reply       String?
+  /** Site language the request came from: "mn" | "en" */
+  locale      String              @default("mn")
+  ip          String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  attachments SupportAttachment[]
+
+  @@index([status, createdAt])
+  @@index([ip, createdAt])
+}
+
+/** File attached to a SupportRequest; downloadable by admins only. */
+model SupportAttachment {
+  id        String         @id @default(cuid())
+  requestId String
+  request   SupportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  name      String
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime       @default(now())
+
+  @@index([requestId])
+}
+
 enum PostCategory {
   NEWS
   TIP

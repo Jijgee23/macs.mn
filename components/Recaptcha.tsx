@@ -11,6 +11,8 @@ declare global {
   interface Window {
     grecaptcha?: Grecaptcha;
     __onRecaptchaLoad?: () => void;
+    /** Widgets waiting for the script; a page can have several (contact + support forms). */
+    __recaptchaQueue?: (() => void)[];
   }
 }
 
@@ -35,7 +37,8 @@ export function Recaptcha({ siteKey, lang, resetKey }: { siteKey: string; lang: 
       render();
       return;
     }
-    window.__onRecaptchaLoad = render;
+    (window.__recaptchaQueue ??= []).push(render);
+    window.__onRecaptchaLoad = () => window.__recaptchaQueue?.splice(0).forEach((fn) => fn());
     if (!document.getElementById(SCRIPT_ID)) {
       const s = document.createElement("script");
       s.id = SCRIPT_ID;

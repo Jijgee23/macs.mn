@@ -3,16 +3,27 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { notifyNewContact, notifyNewQuote } from "@/lib/mail";
+import { notifyNewContact, notifyNewQuote, notifySupportReceived } from "@/lib/mail";
 import { verifyRecaptcha } from "@/lib/recaptcha";
-import { contactTopics, quoteProductIds, type FormErrorCode } from "@/content/common";
+import {
+  contactTopics,
+  quoteProductIds,
+  SUPPORT_MAX_BYTES,
+  SUPPORT_MAX_EMAILS,
+  SUPPORT_MAX_FILES,
+  supportFileExtensions,
+  supportTypes,
+  supportUrgencies,
+  type FormErrorCode,
+} from "@/content/common";
 import type { Locale } from "@/lib/locale";
 
 /**
  * Spam checks (reCAPTCHA, then per-IP rate limit; the honeypot is checked in the
  * actions), validation and storage for the quote and contact forms. Quote requests
  * need an email (the quote is sent there); everything else, and the whole contact
- * form apart from the message, is optional.
+ * form apart from the message, is optional. Support requests (existing customers) need
+ * the organization, a phone, at least one email and the message, and may carry files.
  */
 
 export type InquiryResult = {
@@ -64,6 +75,40 @@ const contactSchema = z.object({
   message: requiredText(4000),
 });
 
+/** "a@x.mn, b@y.mn" (commas, semicolons, spaces or new lines) → unique lowercase addresses. */
+const emailList = z
+  .string()
+  .transform((v) => [...new Set(v.toLowerCase().split(/[\s,;]+/).filter(Boolean))])
+  .pipe(
+    z
+      .array(z.email(code("invalidEmail")))
+      .min(1, code("required"))
+      .max(SUPPORT_MAX_EMAILS, code("tooManyEmails")),
+  );
+
+const supportSchema = z.object({
+  company: requiredText(200),
+  name: optionalText(120),
+  phone: z.string().trim().min(1, code("required")).refine(isPhone, code("invalidPhone")),
+  emails: emailList,
+  type: z.enum(supportTypes).catch("other"),
+  urgency: z.enum(supportUrgencies).catch("normal"),
+  message: requiredText(4000),
+});
+
+const extensionOf = (name: string) => name.slice(name.lastIndexOf(".")).toLowerCase();
+
+/** Drops empty inputs (no file chosen) and checks count, total size and extension. */
+function checkFiles(files: File[]): { files: File[] } | { error: FormErrorCode } {
+  const chosen = files.filter((f) => f.size > 0 && f.name);
+  if (chosen.length > SUPPORT_MAX_FILES) return { error: "tooManyFiles" };
+  if (chosen.reduce((sum, f) => sum + f.size, 0) > SUPPORT_MAX_BYTES) return { error: "filesTooLarge" };
+  if (chosen.some((f) => !(supportFileExtensions as readonly string[]).includes(extensionOf(f.name)))) {
+    return { error: "fileType" };
+  }
+  return { files: chosen };
+}
+
 /** Client IP as set by nginx (which overwrites any client-supplied X-Forwarded-For). */
 async function clientIp() {
   return (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || null;
@@ -111,6 +156,46 @@ export async function createContact(input: unknown, locale: Locale, captchaToken
     return { ok: true };
   } catch (err) {
     console.error("[inquiry] failed to save contact message", err);
+    return { ok: false, error: "unavailable" };
+  }
+}
+
+export async function createSupport(
+  input: unknown,
+  files: File[],
+  locale: Locale,
+  captchaToken: string,
+): Promise<InquiryResult> {
+  const ip = await clientIp();
+  if (!(await verifyRecaptcha(captchaToken, ip))) return { ok: false, error: "captcha" };
+
+  const parsed = supportSchema.safeParse(input);
+  const checked = checkFiles(files);
+  if (!parsed.success || "error" in checked) {
+    const errors = parsed.success ? {} : invalid(parsed.error).errors;
+    return { ok: false, errors: { ...errors, ...("error" in checked && { files: [checked.error] }) } };
+  }
+
+  try {
+    if (ip && (await db.supportRequest.count({ where: { ip, createdAt: { gte: since() } } })) >= RATE_LIMIT_MAX) {
+      return { ok: false, error: "rateLimited" };
+    }
+    const attachments = await Promise.all(
+      checked.files.map(async (f) => ({
+        name: f.name.slice(0, 200),
+        mime: f.type || "application/octet-stream",
+        size: f.size,
+        data: Buffer.from(await f.arrayBuffer()),
+      })),
+    );
+    const record = await db.supportRequest.create({
+      data: { ...parsed.data, locale, ip, attachments: { create: attachments } },
+      include: { attachments: { select: { name: true } } },
+    });
+    after(() => notifySupportReceived(record));
+    return { ok: true };
+  } catch (err) {
+    console.error("[inquiry] failed to save support request", err);
     return { ok: false, error: "unavailable" };
   }
 }

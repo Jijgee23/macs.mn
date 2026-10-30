@@ -76,6 +76,35 @@ export const contactTopics = ["general", "feedback", "support", "partnership", "
 
 export type ContactTopic = (typeof contactTopics)[number];
 
+/** Ids stored in SupportRequest.type / .urgency; labels come from the content. */
+export const supportTypes = ["bug", "change", "report", "feedback", "other"] as const;
+export const supportUrgencies = ["low", "normal", "high", "critical"] as const;
+
+export type SupportType = (typeof supportTypes)[number];
+export type SupportUrgency = (typeof supportUrgencies)[number];
+
+/** Attachment limits for the support form; next.config.ts and nginx allow a bit more. */
+export const SUPPORT_MAX_FILES = 5;
+export const SUPPORT_MAX_BYTES = 10 * 1024 * 1024;
+export const SUPPORT_MAX_EMAILS = 5;
+/** Allowed attachment extensions (checked server-side; also the file picker's `accept`). */
+export const supportFileExtensions = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".csv",
+  ".txt",
+  ".zip",
+  ".rar",
+] as const;
+
 /**
  * Validation codes returned by the form Server Actions and translated by the forms;
  * "unavailable" means the request couldn't be saved.
@@ -88,6 +117,10 @@ export const formErrorCodes = [
   "rateLimited",
   "captcha",
   "unavailable",
+  "tooManyEmails",
+  "tooManyFiles",
+  "filesTooLarge",
+  "fileType",
 ] as const;
 
 export type FormErrorCode = (typeof formErrorCodes)[number];

@@ -2,11 +2,13 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { refresh, revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession, hashPassword, requireAdmin, safeNext, startSession, verifyPassword } from "@/lib/auth";
 import { CONTENT_TAG } from "@/lib/content";
+import { notifySupportStatus } from "@/lib/mail";
 import { contactInfoSchema, sectionSchemas, type SectionKey } from "@/content/schema";
 import { fieldLabels } from "@/content/admin-labels";
 
@@ -189,6 +191,55 @@ export async function updateRequest(formData: FormData) {
     await db.contactMessage.update({ where: { id }, data });
     revalidatePath("/admin/messages");
   }
+  revalidatePath("/admin");
+}
+
+const supportUpdateSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(["NEW", "RECEIVED", "IN_PROGRESS", "RESOLVED", "REJECTED"]),
+  note: z
+    .string()
+    .trim()
+    .max(2000)
+    .transform((v) => v || null),
+  reply: z
+    .string()
+    .trim()
+    .max(4000)
+    .transform((v) => v || null),
+  notify: z.boolean(),
+});
+
+/**
+ * Updates a customer request. A new reply replaces the last one shown on the card; when
+ * "notify" is ticked and the status changed or a reply was written, the customer's
+ * addresses get an email with the new status and that reply.
+ */
+export async function updateSupportRequest(formData: FormData) {
+  await requireAdmin();
+
+  const parsed = supportUpdateSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+    note: formData.get("note") ?? "",
+    reply: formData.get("reply") ?? "",
+    notify: formData.get("notify") === "on",
+  });
+  if (!parsed.success) return;
+
+  const { id, status, note, reply, notify } = parsed.data;
+  const before = await db.supportRequest.findUnique({ where: { id }, select: { status: true } });
+  if (!before) return;
+
+  const updated = await db.supportRequest.update({
+    where: { id },
+    data: { status, note, ...(reply && { reply }) },
+  });
+  if (notify && (status !== before.status || reply)) {
+    // Only this update's reply goes out, not an older one still stored on the request.
+    after(() => notifySupportStatus({ ...updated, reply }));
+  }
+  revalidatePath("/admin/support");
   revalidatePath("/admin");
 }
 

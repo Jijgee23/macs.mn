@@ -49,6 +49,8 @@ sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d macs.mn -d www.macs.mn
 ```
 The nginx config overwrites `X-Forwarded-For` with the client address; the forms rate-limit per IP on it.
+It also raises `client_max_body_size` to 11m for support-request attachments — after changing the
+config, copy it again and run `sudo nginx -t && sudo systemctl reload nginx`.
 
 ## Redeploys
 

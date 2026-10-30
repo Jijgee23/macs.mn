@@ -37,20 +37,23 @@ export function StatusBadge({ status }: { status: RequestStatus }) {
   );
 }
 
-export function StatusFilter({
+/** Tabs per status; `labels` (default: quote/contact statuses) also sets their order. */
+export function StatusFilter<S extends string = RequestStatus>({
   basePath,
   filter,
   counts,
+  labels = STATUS_LABELS as Record<S, string>,
 }: {
   basePath: string;
-  filter?: RequestStatus;
-  counts: { status: RequestStatus; _count: number }[];
+  filter?: S;
+  counts: { status: S; _count: number }[];
+  labels?: Record<S, string>;
 }) {
-  const countOf = (s: RequestStatus) => counts.find((c) => c.status === s)?._count ?? 0;
+  const countOf = (s: S) => counts.find((c) => c.status === s)?._count ?? 0;
   const tabs = [
     { label: "Бүгд", href: basePath, active: !filter, count: counts.reduce((sum, c) => sum + c._count, 0) },
-    ...statuses.map((s) => ({
-      label: STATUS_LABELS[s],
+    ...(Object.keys(labels) as S[]).map((s) => ({
+      label: labels[s],
       href: `${basePath}?status=${s}`,
       active: filter === s,
       count: countOf(s),
