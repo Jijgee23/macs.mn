@@ -180,13 +180,32 @@ async function deliver(id: string, subject: string, model: MailModel, { to, repl
 }
 
 /**
+ * The team's copy of a new request: same fields, but the text speaks to the team (always
+ * in Mongolian) instead of thanking the visitor, and links to the request in /admin.
+ */
+function teamModel(model: MailModel, visitors: string[], adminPath: string): MailModel {
+  const from = model.lang === "en" ? " Сайтын англи хувилбараас илгээсэн." : "";
+  return {
+    ...model,
+    lang: "mn",
+    title: "Сайтаас шинэ хүсэлт ирлээ",
+    intro:
+      (visitors.length
+        ? "Доорх мэдээллийг шалгаад илгээгчтэй холбогдоно уу. Энэ имэйл дээр «Reply» дарвал хариу шууд илгээгч рүү очно."
+        : "Доорх мэдээллийг шалгаад илгээгчтэй холбогдоно уу. Илгээгч имэйл үлдээгээгүй тул утсаар холбогдоно уу.") + from,
+    sectionTitle: "Илгээсэн мэдээлэл",
+    footnote: `Хүсэлтийн төлөвийг админ хэсэгт шинэчилнэ үү: ${model.siteUrl}${adminPath}`,
+  };
+}
+
+/**
  * New request: one email to the team (Reply-To the visitor) and a separate confirmation
  * to the visitor (Reply-To contact@), so the visitor never sees the team's addresses.
  */
-async function notifyNew(id: string, subject: string, model: MailModel, visitors: string[]) {
+async function notifyNew(id: string, subject: string, model: MailModel, visitors: string[], adminPath: string) {
   const team = await teamRecipients();
   await Promise.all([
-    deliver(id, subject, model, { to: team, replyTo: visitors }),
+    deliver(id, subject, teamModel(model, visitors, adminPath), { to: team, replyTo: visitors }),
     visitors.length > 0 && deliver(`${id} (confirmation)`, subject, model, { to: visitors, replyTo: [PRIMARY_NOTIFY_EMAIL] }),
   ]);
 }
@@ -213,7 +232,7 @@ export async function notifyNewQuote(quote: QuoteRequest) {
     message: { label: c.message, value: quote.message },
   };
   const who = quote.company ?? quote.name ?? quote.email ?? quote.phone;
-  await notifyNew(`quote ${quote.id}`, `${c.quoteKind}${who ? ` — ${who}` : ""} · MACS ERP`, model, quote.email ? [quote.email] : []);
+  await notifyNew(`quote ${quote.id}`, `${c.quoteKind}${who ? ` — ${who}` : ""} · MACS ERP`, model, quote.email ? [quote.email] : [], "/admin/requests");
 }
 
 export async function notifyNewContact(message: ContactMessage) {
@@ -231,7 +250,7 @@ export async function notifyNewContact(message: ContactMessage) {
     message: { label: c.message, value: message.message },
   };
   const who = message.name ?? message.email ?? message.phone;
-  await notifyNew(`contact ${message.id}`, `${label.topic(message.topic)}${who ? ` — ${who}` : ""} · MACS ERP`, model, message.email ? [message.email] : []);
+  await notifyNew(`contact ${message.id}`, `${label.topic(message.topic)}${who ? ` — ${who}` : ""} · MACS ERP`, model, message.email ? [message.email] : [], "/admin/messages");
 }
 
 const shortId = (id: string) => id.slice(-8).toUpperCase();
@@ -259,7 +278,7 @@ export async function notifySupportReceived(req: SupportRequest & { attachments:
     message: { label: c.message, value: req.message },
   };
   const subject = `${label.supportType(req.type)} [${label.urgency(req.urgency)}] — ${req.company} · #${shortId(req.id)}`;
-  await notifyNew(`support ${req.id}`, subject, model, req.emails);
+  await notifyNew(`support ${req.id}`, subject, model, req.emails, "/admin/support");
 }
 
 /** Sent to the customer's addresses when an admin changes the status. */
