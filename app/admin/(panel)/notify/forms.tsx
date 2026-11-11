@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import { addNotifyRecipient, deleteNotifyRecipient, type FormState } from "../../actions";
+import { addNotifyRecipient, deleteNotifyRecipient, updateNotifyRecipient, type FormState } from "../../actions";
 import { adminButton, adminCard, adminInput } from "@/components/admin/styles";
 
 export function AddRecipientForm() {
@@ -19,6 +19,30 @@ export function AddRecipientForm() {
         {pending ? "Нэмж байна…" : "Нэмэх"}
       </button>
     </form>
+  );
+}
+
+export function EditRecipientForm({ id, email }: { id: string; email: string }) {
+  const [state, action, pending] = useActionState(updateNotifyRecipient.bind(null, id), {} as FormState);
+  return (
+    <details className="mt-3 text-sm">
+      <summary className="cursor-pointer text-muted hover:text-ink">Засах</summary>
+      <form action={action} className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
+        <input
+          name="email"
+          type="email"
+          required
+          defaultValue={email}
+          autoComplete="off"
+          className={`${adminInput} sm:max-w-xs`}
+        />
+        <button disabled={pending} className={adminButton}>
+          Хадгалах
+        </button>
+        {state.error && <p className="text-sm text-brand" role="alert">{state.error}</p>}
+        {state.ok && <p className="text-sm text-ok" role="status">Хадгалагдлаа</p>}
+      </form>
+    </details>
   );
 }
 

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession, hashPassword, requireAdmin, safeNext, startSession, verifyPassword } from "@/lib/auth";
 import { CONTENT_TAG } from "@/lib/content";
-import { fixedNotifyRecipients, notifySupportStatus } from "@/lib/mail";
+import { notifySupportStatus, PRIMARY_NOTIFY_EMAIL } from "@/lib/mail";
 import { contactInfoSchema, sectionSchemas, type SectionKey } from "@/content/schema";
 import { fieldLabels } from "@/content/admin-labels";
 
@@ -311,17 +311,33 @@ export async function changeOwnPassword(_prev: FormState, formData: FormData): P
 
 const notifyEmail = z.string().trim().toLowerCase().pipe(z.email("Имэйл буруу байна"));
 
-/** Adds an address that gets every new-request email (on top of the fixed NOTIFY_TO). */
-export async function addNotifyRecipient(_prev: FormState, formData: FormData): Promise<FormState> {
-  const admin = await requireAdmin();
-  const parsed = notifyEmail.safeParse(formData.get("email") ?? "");
+/** Validates an address for /admin/notify; `exceptId` is the row being edited. */
+async function checkNotifyEmail(raw: FormDataEntryValue | null, exceptId?: string) {
+  const parsed = notifyEmail.safeParse(raw ?? "");
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-
   const email = parsed.data;
-  if (fixedNotifyRecipients().includes(email) || (await db.notifyRecipient.findUnique({ where: { email } }))) {
+  const existing = await db.notifyRecipient.findUnique({ where: { email } });
+  if (email === PRIMARY_NOTIFY_EMAIL || (existing && existing.id !== exceptId)) {
     return { error: "Энэ имэйл жагсаалтад аль хэдийн байна" };
   }
-  await db.notifyRecipient.create({ data: { email, createdBy: admin.email } });
+  return { email };
+}
+
+/** Adds an address that gets every new-request email (on top of contact@). */
+export async function addNotifyRecipient(_prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireAdmin();
+  const checked = await checkNotifyEmail(formData.get("email"));
+  if (!checked.email) return { error: checked.error };
+  await db.notifyRecipient.create({ data: { email: checked.email, createdBy: admin.email } });
+  refresh();
+  return { ok: true };
+}
+
+export async function updateNotifyRecipient(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const checked = await checkNotifyEmail(formData.get("email"), id);
+  if (!checked.email) return { error: checked.error };
+  await db.notifyRecipient.updateMany({ where: { id }, data: { email: checked.email } });
   refresh();
   return { ok: true };
 }

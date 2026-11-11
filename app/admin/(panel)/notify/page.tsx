@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { Lock } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { fixedNotifyRecipients } from "@/lib/mail";
+import { PRIMARY_NOTIFY_EMAIL } from "@/lib/mail";
 import { dateFormat, Loading } from "@/components/admin/Requests";
-import { AddRecipientForm, DeleteRecipientButton } from "./forms";
+import { AddRecipientForm, DeleteRecipientButton, EditRecipientForm } from "./forms";
 
 export const metadata: Metadata = { title: "Мэдэгдлийн имэйл" };
 
@@ -27,33 +27,33 @@ export default function NotifyPage() {
 
 async function Recipients() {
   await requireAdmin();
-  const fixed = fixedNotifyRecipients();
   const extra = await db.notifyRecipient.findMany({ orderBy: { createdAt: "asc" } });
 
   return (
     <div className="mt-6 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
       <ul className="space-y-3">
-        {fixed.map((email) => (
-          <li key={email} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-5">
-            <div>
-              <p className="font-semibold">{email}</p>
-              <p className="mt-1 text-xs text-muted">Үндсэн хаяг · хэрэглэгчийн хариу энэ хаяг руу очно</p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-md bg-soft px-2 py-0.5 text-xs text-muted">
-              <Lock className="size-3" /> Заавал
-            </span>
-          </li>
-        ))}
+        <li className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-5">
+          <div>
+            <p className="font-semibold">{PRIMARY_NOTIFY_EMAIL}</p>
+            <p className="mt-1 text-xs text-muted">Үндсэн хаяг · хэрэглэгчийн хариу энэ хаяг руу очно</p>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-md bg-soft px-2 py-0.5 text-xs text-muted">
+            <Lock className="size-3" /> Заавал
+          </span>
+        </li>
         {extra.map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-5">
-            <div>
-              <p className="font-semibold">{r.email}</p>
-              <p className="mt-1 text-xs text-muted">
-                Нэмэгдсэн: {dateFormat.format(r.createdAt)}
-                {r.createdBy ? ` · ${r.createdBy}` : ""}
-              </p>
+          <li key={r.id} className="rounded-2xl border border-line bg-surface p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold">{r.email}</p>
+                <p className="mt-1 text-xs text-muted">
+                  Нэмэгдсэн: {dateFormat.format(r.createdAt)}
+                  {r.createdBy ? ` · ${r.createdBy}` : ""}
+                </p>
+              </div>
+              <DeleteRecipientButton id={r.id} email={r.email} />
             </div>
-            <DeleteRecipientButton id={r.id} email={r.email} />
+            <EditRecipientForm id={r.id} email={r.email} />
           </li>
         ))}
       </ul>

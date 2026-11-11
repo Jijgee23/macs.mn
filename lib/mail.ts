@@ -9,7 +9,7 @@ import { renderHtml, renderText, type MailModel } from "@/lib/mail-template";
 
 /**
  * Each new request sends two emails from SMTP_FROM (no_reply@infosystems.mn):
- *  - to the team: NOTIFY_TO (contact@infosystems.mn, always) plus the addresses added in
+ *  - to the team: contact@infosystems.mn (always) plus the addresses managed in
  *    /admin/notify, with Reply-To set to the visitor so the team can answer directly;
  *  - to the visitor, when they left an address: their "we received it" confirmation
  *    (the text addresses them), with Reply-To contact@. They never see the team list.
@@ -138,32 +138,21 @@ function baseModel(locale: Locale, kicker: string, label: Awaited<ReturnType<typ
   };
 }
 
-/** Used when NOTIFY_TO is unset, so contact@ always gets new requests. */
-const DEFAULT_NOTIFY_TO = "contact@infosystems.mn";
-
-const splitEmails = (value: string | undefined) =>
-  (value ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
-
 /**
- * Addresses that always get new-request emails and cannot be removed in /admin/notify:
- * NOTIFY_TO (comma-separated), or contact@infosystems.mn when it is unset. The first one
- * is the Reply-To of every email sent to customers.
+ * Always gets new-request emails and cannot be removed in /admin/notify; also the
+ * Reply-To of every email sent to customers.
  */
-export function fixedNotifyRecipients() {
-  const fromEnv = splitEmails(process.env.NOTIFY_TO);
-  return fromEnv.length ? fromEnv : [DEFAULT_NOTIFY_TO];
-}
+export const PRIMARY_NOTIFY_EMAIL = "contact@infosystems.mn";
 
-/** Fixed addresses plus the ones added in /admin/notify, without duplicates. */
+/** contact@ plus the addresses managed in /admin/notify, without duplicates. */
 async function teamRecipients() {
-  const fixed = fixedNotifyRecipients();
   try {
     const extra = await db.notifyRecipient.findMany({ select: { email: true }, orderBy: { createdAt: "asc" } });
-    return [...new Set([...fixed, ...extra.map((r) => r.email)])];
+    return [...new Set([PRIMARY_NOTIFY_EMAIL, ...extra.map((r) => r.email)])];
   } catch (err) {
     // Still reach contact@ if the database is unavailable.
     console.error("[notify] could not load recipients from /admin/notify", err);
-    return fixed;
+    return [PRIMARY_NOTIFY_EMAIL];
   }
 }
 
@@ -198,14 +187,14 @@ async function notifyNew(id: string, subject: string, model: MailModel, visitors
   const team = await teamRecipients();
   await Promise.all([
     deliver(id, subject, model, { to: team, replyTo: visitors }),
-    visitors.length > 0 && deliver(`${id} (confirmation)`, subject, model, { to: visitors, replyTo: [team[0]] }),
+    visitors.length > 0 && deliver(`${id} (confirmation)`, subject, model, { to: visitors, replyTo: [PRIMARY_NOTIFY_EMAIL] }),
   ]);
 }
 
 /** Email to a customer only (status updates); replies go to contact@. */
 async function notifyCustomer(id: string, subject: string, model: MailModel, to: string[]) {
   if (!to.length) return;
-  await deliver(id, subject, model, { to, replyTo: [fixedNotifyRecipients()[0]] });
+  await deliver(id, subject, model, { to, replyTo: [PRIMARY_NOTIFY_EMAIL] });
 }
 
 export async function notifyNewQuote(quote: QuoteRequest) {

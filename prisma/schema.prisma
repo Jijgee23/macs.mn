@@ -29,7 +29,7 @@ model AdminUser {
 
 /**
  * Extra address that gets every new-request notification, managed in /admin/notify.
- * NOTIFY_TO (contact@infosystems.mn) always gets them as well and is not stored here.
+ * contact@infosystems.mn always gets them as well and is not stored here (lib/mail.ts).
  */
 model NotifyRecipient {
   id        String   @id @default(cuid())
