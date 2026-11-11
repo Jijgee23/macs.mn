@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { PRIMARY_NOTIFY_EMAIL } from "@/lib/mail";
-import { dateFormat, Loading } from "@/components/admin/Requests";
+import { Loading } from "@/components/admin/Requests";
 import { AddRecipientForm, DeleteRecipientButton, EditRecipientForm } from "./forms";
 
 export const metadata: Metadata = { title: "Мэдэгдлийн имэйл" };
@@ -44,13 +44,7 @@ async function Recipients() {
         {extra.map((r) => (
           <li key={r.id} className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-semibold">{r.email}</p>
-                <p className="mt-1 text-xs text-muted">
-                  Нэмэгдсэн: {dateFormat.format(r.createdAt)}
-                  {r.createdBy ? ` · ${r.createdBy}` : ""}
-                </p>
-              </div>
+              <p className="font-semibold">{r.email}</p>
               <DeleteRecipientButton id={r.id} email={r.email} />
             </div>
             <EditRecipientForm id={r.id} email={r.email} />
