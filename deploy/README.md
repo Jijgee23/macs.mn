@@ -3,7 +3,7 @@
 macs.mn has its own Postgres database `macs_site` holding:
 - **content** — every text on the site in MN and EN, edited at `macs.mn/admin/content` (`ContentSection`; `content/mn.ts` / `content/en.ts` are the seed and the fallback when the database is empty or unreachable),
 - **admins** — managed at `/admin/users`,
-- **quote requests and contact messages** — listed at `/admin/requests` and `/admin/messages`. Each one is emailed from `no_reply@infosystems.mn` (smtp.mail.mn) to `NOTIFY_TO` (contact@infosystems.mn), with the visitor in CC as their confirmation. Spam protection: reCAPTCHA v2, a honeypot field and 3 requests / 10 min per IP.
+- **quote requests and contact messages** — listed at `/admin/requests` and `/admin/messages`. Each one is emailed from `no_reply@infosystems.mn` (smtp.mail.mn) to `NOTIFY_TO` (contact@infosystems.mn, always) plus the addresses added at `/admin/notify`, with Reply-To set to the visitor; the visitor gets a separate confirmation and never sees the team's addresses. Spam protection: reCAPTCHA v2, a honeypot field and 3 requests / 10 min per IP.
 
 The server runs every app under **pm2** (user `ubuntu`, Node 22 from nvm) behind **nginx** with certbot TLS:
 

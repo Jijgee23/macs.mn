@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession, hashPassword, requireAdmin, safeNext, startSession, verifyPassword } from "@/lib/auth";
 import { CONTENT_TAG } from "@/lib/content";
-import { notifySupportStatus } from "@/lib/mail";
+import { fixedNotifyRecipients, notifySupportStatus } from "@/lib/mail";
 import { contactInfoSchema, sectionSchemas, type SectionKey } from "@/content/schema";
 import { fieldLabels } from "@/content/admin-labels";
 
@@ -305,4 +305,29 @@ export async function changeOwnPassword(_prev: FormState, formData: FormData): P
 
   await db.adminUser.update({ where: { id: me.id }, data: { passwordHash: await hashPassword(parsed.data) } });
   return { ok: true };
+}
+
+/* ---------- Notification recipients ---------- */
+
+const notifyEmail = z.string().trim().toLowerCase().pipe(z.email("Имэйл буруу байна"));
+
+/** Adds an address that gets every new-request email (on top of the fixed NOTIFY_TO). */
+export async function addNotifyRecipient(_prev: FormState, formData: FormData): Promise<FormState> {
+  const admin = await requireAdmin();
+  const parsed = notifyEmail.safeParse(formData.get("email") ?? "");
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const email = parsed.data;
+  if (fixedNotifyRecipients().includes(email) || (await db.notifyRecipient.findUnique({ where: { email } }))) {
+    return { error: "Энэ имэйл жагсаалтад аль хэдийн байна" };
+  }
+  await db.notifyRecipient.create({ data: { email, createdBy: admin.email } });
+  refresh();
+  return { ok: true };
+}
+
+export async function deleteNotifyRecipient(id: string) {
+  await requireAdmin();
+  await db.notifyRecipient.deleteMany({ where: { id } });
+  revalidatePath("/admin/notify");
 }

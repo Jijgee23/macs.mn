@@ -3,15 +3,18 @@ import nodemailer from "nodemailer";
 import type { ContactMessage, QuoteRequest, SupportRequest, SupportStatus } from "@prisma/client";
 import type { ContactTopic, QuoteProductId, SupportType, SupportUrgency } from "@/content/common";
 import { loadAllContent } from "@/lib/content";
+import { db } from "@/lib/db";
 import { isLocale, type Locale } from "@/lib/locale";
 import { renderHtml, renderText, type MailModel } from "@/lib/mail-template";
 
 /**
- * One email per request: from SMTP_FROM (no_reply@infosystems.mn) to NOTIFY_TO
- * (contact@infosystems.mn), with the visitor in CC when they left an email address —
- * that copy is their "we received it" confirmation, so the text addresses them.
- * Support requests CC every address the customer listed, and later status updates go
- * straight to those addresses.
+ * Each new request sends two emails from SMTP_FROM (no_reply@infosystems.mn):
+ *  - to the team: NOTIFY_TO (contact@infosystems.mn, always) plus the addresses added in
+ *    /admin/notify, with Reply-To set to the visitor so the team can answer directly;
+ *  - to the visitor, when they left an address: their "we received it" confirmation
+ *    (the text addresses them), with Reply-To contact@. They never see the team list.
+ * Support requests confirm to every address the customer listed, and later status
+ * updates go straight to those addresses.
  */
 
 function transport() {
@@ -135,26 +138,49 @@ function baseModel(locale: Locale, kicker: string, label: Awaited<ReturnType<typ
   };
 }
 
-type Recipients = { to?: string[]; visitors: string[] };
+/** Used when NOTIFY_TO is unset, so contact@ always gets new requests. */
+const DEFAULT_NOTIFY_TO = "contact@infosystems.mn";
+
+const splitEmails = (value: string | undefined) =>
+  (value ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
 /**
- * Never throws — the request is already saved and listed in /admin. Goes to NOTIFY_TO
- * with the visitors in CC, or only to `to` when given (status updates).
+ * Addresses that always get new-request emails and cannot be removed in /admin/notify:
+ * NOTIFY_TO (comma-separated), or contact@infosystems.mn when it is unset. The first one
+ * is the Reply-To of every email sent to customers.
  */
-async function send(id: string, subject: string, model: MailModel, { to, visitors }: Recipients) {
+export function fixedNotifyRecipients() {
+  const fromEnv = splitEmails(process.env.NOTIFY_TO);
+  return fromEnv.length ? fromEnv : [DEFAULT_NOTIFY_TO];
+}
+
+/** Fixed addresses plus the ones added in /admin/notify, without duplicates. */
+async function teamRecipients() {
+  const fixed = fixedNotifyRecipients();
+  try {
+    const extra = await db.notifyRecipient.findMany({ select: { email: true }, orderBy: { createdAt: "asc" } });
+    return [...new Set([...fixed, ...extra.map((r) => r.email)])];
+  } catch (err) {
+    // Still reach contact@ if the database is unavailable.
+    console.error("[notify] could not load recipients from /admin/notify", err);
+    return fixed;
+  }
+}
+
+type Envelope = { to: string[]; replyTo?: string[] };
+
+/** Never throws — the request is already saved and listed in /admin. */
+async function deliver(id: string, subject: string, model: MailModel, { to, replyTo }: Envelope) {
   const mailer = transport();
-  const team = process.env.NOTIFY_TO;
-  if (!mailer || !team) {
+  if (!mailer) {
     console.warn(`[notify] SMTP not configured; skipped email for ${id}`);
     return;
   }
-  const cc = visitors.length ? visitors : undefined;
   try {
     await mailer.sendMail({
       from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
-      to: to ?? team,
-      cc: to ? undefined : cc,
-      replyTo: to ? team : cc,
+      to,
+      replyTo: replyTo?.length ? replyTo : undefined,
       subject,
       text: renderText(model),
       html: renderHtml(model),
@@ -162,6 +188,24 @@ async function send(id: string, subject: string, model: MailModel, { to, visitor
   } catch (err) {
     console.error(`[notify] failed to email ${id}`, err);
   }
+}
+
+/**
+ * New request: one email to the team (Reply-To the visitor) and a separate confirmation
+ * to the visitor (Reply-To contact@), so the visitor never sees the team's addresses.
+ */
+async function notifyNew(id: string, subject: string, model: MailModel, visitors: string[]) {
+  const team = await teamRecipients();
+  await Promise.all([
+    deliver(id, subject, model, { to: team, replyTo: visitors }),
+    visitors.length > 0 && deliver(`${id} (confirmation)`, subject, model, { to: visitors, replyTo: [team[0]] }),
+  ]);
+}
+
+/** Email to a customer only (status updates); replies go to contact@. */
+async function notifyCustomer(id: string, subject: string, model: MailModel, to: string[]) {
+  if (!to.length) return;
+  await deliver(id, subject, model, { to, replyTo: [fixedNotifyRecipients()[0]] });
 }
 
 export async function notifyNewQuote(quote: QuoteRequest) {
@@ -180,7 +224,7 @@ export async function notifyNewQuote(quote: QuoteRequest) {
     message: { label: c.message, value: quote.message },
   };
   const who = quote.company ?? quote.name ?? quote.email ?? quote.phone;
-  await send(`quote ${quote.id}`, `${c.quoteKind}${who ? ` — ${who}` : ""} · MACS ERP`, model, { visitors: quote.email ? [quote.email] : [] });
+  await notifyNew(`quote ${quote.id}`, `${c.quoteKind}${who ? ` — ${who}` : ""} · MACS ERP`, model, quote.email ? [quote.email] : []);
 }
 
 export async function notifyNewContact(message: ContactMessage) {
@@ -198,7 +242,7 @@ export async function notifyNewContact(message: ContactMessage) {
     message: { label: c.message, value: message.message },
   };
   const who = message.name ?? message.email ?? message.phone;
-  await send(`contact ${message.id}`, `${label.topic(message.topic)}${who ? ` — ${who}` : ""} · MACS ERP`, model, { visitors: message.email ? [message.email] : [] });
+  await notifyNew(`contact ${message.id}`, `${label.topic(message.topic)}${who ? ` — ${who}` : ""} · MACS ERP`, model, message.email ? [message.email] : []);
 }
 
 const shortId = (id: string) => id.slice(-8).toUpperCase();
@@ -226,7 +270,7 @@ export async function notifySupportReceived(req: SupportRequest & { attachments:
     message: { label: c.message, value: req.message },
   };
   const subject = `${label.supportType(req.type)} [${label.urgency(req.urgency)}] — ${req.company} · #${shortId(req.id)}`;
-  await send(`support ${req.id}`, subject, model, { visitors: req.emails });
+  await notifyNew(`support ${req.id}`, subject, model, req.emails);
 }
 
 /** Sent to the customer's addresses when an admin changes the status. */
@@ -244,8 +288,5 @@ export async function notifySupportStatus(req: SupportRequest) {
     // The admin's explanation when there is one, otherwise the original request.
     message: req.reply ? { label: c.statusReply, value: req.reply } : { label: c.message, value: req.message },
   };
-  await send(`support status ${req.id}`, `${c.statusTitle(status)} · #${shortId(req.id)} · MACS ERP`, model, {
-    to: req.emails,
-    visitors: [],
-  });
+  await notifyCustomer(`support status ${req.id}`, `${c.statusTitle(status)} · #${shortId(req.id)} · MACS ERP`, model, req.emails);
 }

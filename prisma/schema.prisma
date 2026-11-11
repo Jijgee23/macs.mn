@@ -27,6 +27,18 @@ model AdminUser {
   lastLoginAt  DateTime?
 }
 
+/**
+ * Extra address that gets every new-request notification, managed in /admin/notify.
+ * NOTIFY_TO (contact@infosystems.mn) always gets them as well and is not stored here.
+ */
+model NotifyRecipient {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  /** Email of the admin who added it */
+  createdBy String?
+}
+
 /** Follow-up state shared by quote requests and contact messages. */
 enum RequestStatus {
   NEW
