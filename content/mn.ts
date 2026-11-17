@@ -4,12 +4,12 @@ export const mn: SiteContent = {
   meta: {
     title: "MACS ERP — Санхүү, бүртгэлийн цогц систем",
     description:
-      "MACS ERP, MacsXE4, MACS POS — 1998 оноос хойш 1000 гаруй байгууллагын итгэлийг хүлээсэн, бүрэн монгол хэл дээрх санхүү, бүртгэлийн систем. InfoSystems Mongolia ХХК.",
+      "MACS ERP, MacsXE4, MACS POS — 1998 оноос хойш 1000 гаруй байгууллагын итгэлийг хүлээсэн, бүрэн монгол хэл дээрх санхүү, бүртгэлийн систем. Инфосистемс ХХК.",
     ogLocale: "mn_MN",
     quoteTitle: "Үнийн санал авах",
     quoteDescription: "MACS ERP, MACS POS болон бусад системийн үнийн санал авах хүсэлт илгээх.",
     contactTitle: "Холбоо барих",
-    contactDescription: "InfoSystems Mongolia ХХК-тай холбогдох — асуулт, санал хүсэлт, техникийн дэмжлэг, хамтын ажиллагаа.",
+    contactDescription: "Инфосистемс ХХК-тай холбогдох — асуулт, санал хүсэлт, техникийн дэмжлэг, хамтын ажиллагаа.",
   },
   nav: {
     home: "MACS ERP — нүүр хуудас",
@@ -28,7 +28,7 @@ export const mn: SiteContent = {
     language: "Хэл сонгох",
   },
   company: {
-    name: "InfoSystems Mongolia ХХК",
+    name: "Инфосистемс ХХК",
     address: "Улаанбаатар хот, Чингэлтэй дүүрэг, 5-р хороо, 6-р хороолол, Баянбогд плаза, 4 давхар",
     hours: "Даваа — Баасан, 09:00 — 18:00",
     phoneKinds: { main: "Үндсэн", extra: "Нэмэлт", mobile: "Гар утас" },

@@ -4,12 +4,12 @@ export const en: SiteContent = {
   meta: {
     title: "MACS ERP — Complete accounting and business management system",
     description:
-      "MACS ERP, MacsXE4 and MACS POS — accounting and business management software trusted by over 1,000 organizations in Mongolia since 1998. By InfoSystems Mongolia LLC.",
+      "MACS ERP, MacsXE4 and MACS POS — accounting and business management software trusted by over 1,000 organizations in Mongolia since 1998. By Infosystems LLC.",
     ogLocale: "en_US",
     quoteTitle: "Request a quote",
     quoteDescription: "Request a price quote for MACS ERP, MACS POS and other systems.",
     contactTitle: "Contact us",
-    contactDescription: "Get in touch with InfoSystems Mongolia LLC — questions, feedback, technical support and partnerships.",
+    contactDescription: "Get in touch with Infosystems LLC — questions, feedback, technical support and partnerships.",
   },
   nav: {
     home: "MACS ERP — home",
@@ -28,7 +28,7 @@ export const en: SiteContent = {
     language: "Choose language",
   },
   company: {
-    name: "InfoSystems Mongolia LLC",
+    name: "Infosystems LLC",
     address: "4th floor, Bayanbogd Plaza, 6th microdistrict, 5th khoroo, Chingeltei district, Ulaanbaatar, Mongolia",
     hours: "Monday — Friday, 09:00 — 18:00 (UTC+8)",
     phoneKinds: { main: "Main", extra: "Secondary", mobile: "Mobile" },
