@@ -29,7 +29,7 @@ export const en: SiteContent = {
   },
   company: {
     name: "Infosystems LLC",
-    address: "4th floor, Bayanbogd Plaza, 6th microdistrict, 5th khoroo, Chingeltei district, Ulaanbaatar, Mongolia",
+    address: "Room 402, Bayanbogd Plaza, 6th microdistrict, 5th khoroo, Chingeltei district, Ulaanbaatar, Mongolia",
     hours: "Monday — Friday, 09:00 — 18:00 (UTC+8)",
     phoneKinds: { main: "Main", extra: "Secondary", mobile: "Mobile" },
   },
