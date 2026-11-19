@@ -8,15 +8,29 @@ import sanitizeHtml from "sanitize-html";
  */
 export function sanitizePostHtml(input: string) {
   return sanitizeHtml(input, {
-    allowedTags: ["p", "br", "h2", "h3", "strong", "b", "em", "i", "u", "s", "a", "ul", "ol", "li", "blockquote", "img", "hr", "code", "pre", "span"],
+    allowedTags: ["p", "br", "h2", "h3", "strong", "b", "em", "i", "u", "s", "a", "ul", "ol", "li", "blockquote", "img", "hr", "code", "pre", "span", "div"],
     allowedAttributes: {
       a: ["href", "target", "rel"],
       img: ["src", "alt", "width", "height", "class", "style"],
       span: ["class"],
+      p: ["class"],
+      h2: ["class"],
+      h3: ["class"],
+      ul: ["class"],
+      ol: ["class"],
+      blockquote: ["class"],
+      div: ["class"],
     },
     allowedStyles: { img: { width: [/^\d{1,3}%$/] } },
     allowedClasses: {
       span: ["fs-xs", "fs-sm", "fs-lg", "fs-xl", "fs-2xl", "fs-3xl"],
+      p: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
+      h2: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
+      h3: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
+      ul: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
+      ol: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
+      blockquote: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
+      div: ["cols", "cols-2", "cols-3"],
       img: ["img-w25", "img-w33", "img-w50", "img-w75", "img-w100", "img-left", "img-center", "img-right"],
     },
     allowedSchemes: ["https", "http", "mailto", "tel"],

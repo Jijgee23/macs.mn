@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { EditorContent, Mark, useEditor, type Editor } from "@tiptap/react";
+import { EditorContent, Extension, Mark, Node as TiptapNode, useEditor, type Editor } from "@tiptap/react";
+import type { Node as ProseNode } from "@tiptap/pm/model";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { uploadImage } from "./upload";
@@ -11,6 +12,8 @@ import {
   AlignRight,
   Bold,
   Captions,
+  Columns2,
+  Columns3,
   Heading2,
   Heading3,
   ImagePlus,
@@ -22,6 +25,7 @@ import {
   Minus,
   Quote,
   Redo2,
+  Rows2,
   Strikethrough,
   Underline,
   Undo2,
@@ -72,6 +76,73 @@ const SizedImage = Image.extend({
       size: sizeAttr,
       align: alignAttr,
     };
+  },
+});
+
+/** Line spacing and text alignment of a block: stored as classes (lh-…, ta-…), styled in globals.css. */
+export const LINE_HEIGHTS = [
+  { id: "", label: "Мөрийн зай: анхны" },
+  { id: "tight", label: "Нягт" },
+  { id: "snug", label: "Бага зэрэг нягт" },
+  { id: "relaxed", label: "Сул" },
+  { id: "loose", label: "Маш сул" },
+] as const;
+
+export const TEXT_ALIGNS = [
+  { id: "", label: "Байрлал: зүүн" },
+  { id: "center", label: "Голд" },
+  { id: "right", label: "Баруун" },
+  { id: "justify", label: "Тэгшлэх" },
+] as const;
+
+const BLOCK_TYPES = ["paragraph", "heading", "bulletList", "orderedList", "blockquote"];
+
+const classValue = (prefix: string, allowed: readonly string[]) => (el: HTMLElement) =>
+  allowed.find((v) => el.classList.contains(`${prefix}${v}`)) ?? null;
+
+const BlockStyle = Extension.create({
+  name: "blockStyle",
+  addGlobalAttributes() {
+    return [
+      {
+        types: BLOCK_TYPES,
+        attributes: {
+          lineHeight: {
+            default: null,
+            parseHTML: classValue("lh-", LINE_HEIGHTS.map((l) => l.id).filter(Boolean)),
+            renderHTML: (attrs: { lineHeight?: string | null }) => (attrs.lineHeight ? { class: `lh-${attrs.lineHeight}` } : {}),
+          },
+          textAlign: {
+            default: null,
+            parseHTML: classValue("ta-", TEXT_ALIGNS.map((l) => l.id).filter(Boolean)),
+            renderHTML: (attrs: { textAlign?: string | null }) => (attrs.textAlign ? { class: `ta-${attrs.textAlign}` } : {}),
+          },
+        },
+      },
+    ];
+  },
+});
+
+/** A group of blocks laid out in 2 or 3 text columns (<div class="cols cols-2">). */
+const Columns = TiptapNode.create({
+  name: "columns",
+  group: "block",
+  content: "block+",
+  defining: true,
+  addAttributes() {
+    return {
+      count: {
+        default: "2",
+        parseHTML: (el: HTMLElement) => (el.classList.contains("cols-3") ? "3" : "2"),
+        renderHTML: (attrs: { count?: string }) => ({ class: `cols cols-${attrs.count === "3" ? "3" : "2"}` }),
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "div.cols" }];
+  },
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, string> }) {
+    return ["div", HTMLAttributes, 0];
   },
 });
 
@@ -163,6 +234,8 @@ export function RichEditor({
       }),
       SizedImage.configure({ HTMLAttributes: { loading: "lazy" } }),
       FontSize,
+      BlockStyle,
+      Columns,
     ],
     content: value,
     editorProps: {
@@ -240,6 +313,56 @@ function Toolbar({
     if (id) chain.setMark("fontSize", { size: id }).run();
     else chain.unsetMark("fontSize").run();
   };
+  const textblock = editor.state.selection.$from.parent;
+  const lineHeight = (textblock.attrs.lineHeight as string | undefined) ?? "";
+  const textAlign = (textblock.attrs.textAlign as string | undefined) ?? "";
+  // Applies to every paragraph, heading, list and quote the selection touches.
+  const setBlockAttr = (attr: "lineHeight" | "textAlign", value: string) =>
+    editor
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        state.doc.nodesBetween(state.selection.from, state.selection.to, (node, pos) => {
+          if (BLOCK_TYPES.includes(node.type.name)) tr.setNodeMarkup(pos, undefined, { ...node.attrs, [attr]: value || null });
+        });
+        return true;
+      })
+      .run();
+  // The first columns block the selection touches (the cursor inside it, or a range that reaches it).
+  const columnsAtCursor = (() => {
+    const hits: { node: ProseNode; pos: number }[] = [];
+    editor.state.doc.nodesBetween(editor.state.selection.from, editor.state.selection.to, (node, pos) => {
+      if (!hits.length && node.type.name === "columns") hits.push({ node, pos });
+      return !hits.length;
+    });
+    return hits[0] ?? null;
+  })();
+  const inColumns = !!columnsAtCursor;
+  const columnCount = (columnsAtCursor?.node.attrs.count as string | undefined) ?? "";
+  const setColumns = (count: "2" | "3") => {
+    if (!columnsAtCursor) return void editor.chain().focus().wrapIn("columns", { count }).run();
+    const { node, pos } = columnsAtCursor;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, count });
+        return true;
+      })
+      .run();
+  };
+  const unwrapColumns = () => {
+    if (!columnsAtCursor) return;
+    const { node, pos } = columnsAtCursor;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        tr.replaceWith(pos, pos + node.nodeSize, node.content);
+        return true;
+      })
+      .run();
+  };
   const imageActive = editor.isActive("image");
   const imageSize = (editor.getAttributes("image").size as string | undefined) ?? "";
   const imageAlign = (editor.getAttributes("image").align as string | undefined) ?? "";
@@ -297,6 +420,15 @@ function Toolbar({
     ...(onPickImages
       ? [
           [
+            { icon: Columns2, label: "2 багана", run: () => setColumns("2"), active: inColumns && columnCount === "2" },
+            { icon: Columns3, label: "3 багана", run: () => setColumns("3"), active: inColumns && columnCount === "3" },
+            { icon: Rows2, label: "Баганыг болиулах", run: unwrapColumns, disabled: !inColumns },
+          ],
+        ]
+      : []),
+    ...(onPickImages
+      ? [
+          [
             { icon: ImagePlus, label: uploading ? `Зураг оруулж байна (${uploading})…` : "Зураг оруулах", run: onPickImages, disabled: uploading > 0 },
             { icon: AlignLeft, label: "Зураг зүүн талд (текст тойрно)", run: () => setImageAlign("left"), active: imageAlign === "left", disabled: !imageActive },
             { icon: AlignCenter, label: "Зураг голд", run: () => setImageAlign("center"), active: imageAlign === "center", disabled: !imageActive },
@@ -328,6 +460,36 @@ function Toolbar({
               </option>
             ))}
           </select>
+        )}
+        {onPickImages && (
+          <>
+            <select
+              aria-label="Мөр хоорондын зай"
+              title="Мөр хоорондын зай"
+              value={lineHeight}
+              onChange={(e) => setBlockAttr("lineHeight", e.target.value)}
+              className="h-8 rounded-md border border-line bg-surface px-1.5 text-xs text-ink outline-none focus:border-brand"
+            >
+              {LINE_HEIGHTS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Текстийн байрлал"
+              title="Текстийн байрлал"
+              value={textAlign}
+              onChange={(e) => setBlockAttr("textAlign", e.target.value)}
+              className="h-8 rounded-md border border-line bg-surface px-1.5 text-xs text-ink outline-none focus:border-brand"
+            >
+              {TEXT_ALIGNS.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </>
         )}
         {onPickImages && (
           <div className="flex items-center gap-1">

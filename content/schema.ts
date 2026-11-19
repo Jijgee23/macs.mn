@@ -116,14 +116,14 @@ export const sectionSchemas = {
           hidden: z.boolean().default(false),
           comingSoon: z.boolean().default(false),
           logo: optionalLogo,
-          /** Longer description shown on the product's own page; empty = the card has no detail page. */
+          /** Longer description (HTML from the rich editor, so tags count) shown on the product's own page; empty = the card has no detail page. */
           /** Uploaded brochure (PDF, PowerPoint ...); opened from the card when there is no detail page. */
           brochure: z
             .string()
             .trim()
             .refine((v) => v === "" || /^\/media\/[a-z0-9]{20,32}$/.test(v), "Файл зөвхөн админаар оруулсан байна")
             .default(""),
-          details: z.string().trim().max(8000, "Тайлбар хэт урт").default(""),
+          details: z.string().trim().max(100000, "Тайлбар хэт урт").default(""),
         }),
       )
       .min(1),

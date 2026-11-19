@@ -262,6 +262,64 @@ section[id] {
     max-width: 100%;
   }
 }
+/* Line spacing, alignment and text columns chosen in the editor. */
+.rich .lh-tight {
+  line-height: 1.35;
+}
+.rich .lh-snug {
+  line-height: 1.55;
+}
+.rich .lh-relaxed {
+  line-height: 2;
+}
+.rich .lh-loose {
+  line-height: 2.4;
+}
+.rich .ta-center {
+  text-align: center;
+}
+.rich .ta-right {
+  text-align: right;
+}
+.rich .ta-justify {
+  text-align: justify;
+}
+.rich .cols {
+  column-gap: 2.25rem;
+}
+.rich .cols-2 {
+  column-count: 2;
+}
+.rich .cols-3 {
+  column-count: 3;
+}
+.rich .cols > * + * {
+  margin-top: 1.1em;
+}
+.rich .cols > :first-child {
+  margin-top: 0;
+}
+.rich .cols h2,
+.rich .cols h3 {
+  margin-top: 0;
+  break-after: avoid;
+}
+.rich .cols li,
+.rich .cols blockquote,
+.rich .cols img {
+  break-inside: avoid;
+}
+@media (max-width: 767px) {
+  .rich .cols-2,
+  .rich .cols-3 {
+    column-count: 1;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .rich .cols-3 {
+    column-count: 2;
+  }
+}
 .rich .fs-xs {
   font-size: 0.75em;
 }
