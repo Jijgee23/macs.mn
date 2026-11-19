@@ -12,8 +12,10 @@ import {
   AlignRight,
   Bold,
   Captions,
+  BetweenHorizontalEnd,
   Columns2,
   Columns3,
+  Columns4,
   Heading2,
   Heading3,
   ImagePlus,
@@ -27,6 +29,7 @@ import {
   Redo2,
   Rows2,
   Strikethrough,
+  Trash2,
   Underline,
   Undo2,
   type LucideIcon,
@@ -123,26 +126,50 @@ const BlockStyle = Extension.create({
   },
 });
 
-/** A group of blocks laid out in 2 or 3 text columns (<div class="cols cols-2">). */
-const Columns = TiptapNode.create({
-  name: "columns",
-  group: "block",
+/**
+ * Real columns, like Word: a layout of 2–4 columns, each holding its own headings, lists, text and
+ * pictures (<div class="cg cg-2"><div class="cg-col">…</div>…</div>, styled in globals.css).
+ */
+export const COLUMN_RATIOS: Record<number, { id: string; label: string }[]> = {
+  2: [{ id: "", label: "Тэнцүү" }, { id: "1-2", label: "1 : 2" }, { id: "2-1", label: "2 : 1" }],
+  3: [{ id: "", label: "Тэнцүү" }, { id: "2-1-1", label: "2 : 1 : 1" }, { id: "1-2-1", label: "1 : 2 : 1" }, { id: "1-1-2", label: "1 : 1 : 2" }],
+  4: [{ id: "", label: "Тэнцүү" }],
+};
+const ALL_RATIOS = Object.values(COLUMN_RATIOS).flat().map((r) => r.id).filter(Boolean);
+
+const Column = TiptapNode.create({
+  name: "column",
   content: "block+",
+  isolating: true,
+  parseHTML() {
+    return [{ tag: "div.cg-col" }];
+  },
+  renderHTML() {
+    return ["div", { class: "cg-col" }, 0];
+  },
+});
+
+const ColumnLayout = TiptapNode.create({
+  name: "columnLayout",
+  group: "block",
+  content: "column{2,4}",
   defining: true,
+  isolating: true,
   addAttributes() {
     return {
-      count: {
-        default: "2",
-        parseHTML: (el: HTMLElement) => (el.classList.contains("cols-3") ? "3" : "2"),
-        renderHTML: (attrs: { count?: string }) => ({ class: `cols cols-${attrs.count === "3" ? "3" : "2"}` }),
+      ratio: {
+        default: null,
+        parseHTML: (el: HTMLElement) => ALL_RATIOS.find((r) => el.classList.contains(`cg-r-${r}`)) ?? null,
+        renderHTML: () => ({}),
       },
     };
   },
   parseHTML() {
-    return [{ tag: "div.cols" }];
+    return [{ tag: "div.cg" }];
   },
-  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, string> }) {
-    return ["div", HTMLAttributes, 0];
+  renderHTML({ node }: { node: { childCount: number; attrs: Record<string, unknown> } }) {
+    const ratio = node.attrs.ratio as string | null;
+    return ["div", { class: `cg cg-${node.childCount}${ratio ? ` cg-r-${ratio}` : ""}` }, 0];
   },
 });
 
@@ -235,7 +262,8 @@ export function RichEditor({
       SizedImage.configure({ HTMLAttributes: { loading: "lazy" } }),
       FontSize,
       BlockStyle,
-      Columns,
+      ColumnLayout,
+      Column,
     ],
     content: value,
     editorProps: {
@@ -328,37 +356,77 @@ function Toolbar({
         return true;
       })
       .run();
-  // The first columns block the selection touches (the cursor inside it, or a range that reaches it).
-  const columnsAtCursor = (() => {
-    const hits: { node: ProseNode; pos: number }[] = [];
-    editor.state.doc.nodesBetween(editor.state.selection.from, editor.state.selection.to, (node, pos) => {
-      if (!hits.length && node.type.name === "columns") hits.push({ node, pos });
-      return !hits.length;
-    });
-    return hits[0] ?? null;
+  // The column layout (and the column) the cursor is in.
+  const columnCtx = (() => {
+    const { $from } = editor.state.selection;
+    let column: { node: ProseNode; pos: number } | null = null;
+    for (let d = $from.depth; d > 0; d--) {
+      const n = $from.node(d);
+      if (!column && n.type.name === "column") column = { node: n, pos: $from.before(d) };
+      if (n.type.name === "columnLayout") return column ? { layout: { node: n, pos: $from.before(d) }, column } : null;
+    }
+    return null;
   })();
-  const inColumns = !!columnsAtCursor;
-  const columnCount = (columnsAtCursor?.node.attrs.count as string | undefined) ?? "";
-  const setColumns = (count: "2" | "3") => {
-    if (!columnsAtCursor) return void editor.chain().focus().wrapIn("columns", { count }).run();
-    const { node, pos } = columnsAtCursor;
+  const inLayout = !!columnCtx;
+  const columnTotal = columnCtx?.layout.node.childCount ?? 0;
+  const layoutRatio = (columnCtx?.layout.node.attrs.ratio as string | null) ?? "";
+  const insertLayout = (n: number) =>
     editor
       .chain()
       .focus()
-      .command(({ tr }) => {
-        tr.setNodeMarkup(pos, undefined, { ...node.attrs, count });
+      .insertContent({
+        type: "columnLayout",
+        content: Array.from({ length: n }, () => ({ type: "column", content: [{ type: "paragraph" }] })),
+      })
+      .run();
+  const addColumn = () => {
+    if (!columnCtx || columnTotal >= 4) return;
+    const { layout, column } = columnCtx;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        tr.setNodeMarkup(layout.pos, undefined, { ...layout.node.attrs, ratio: null });
+        tr.insert(column.pos + column.node.nodeSize, state.schema.nodes.column.createAndFill()!);
         return true;
       })
       .run();
   };
-  const unwrapColumns = () => {
-    if (!columnsAtCursor) return;
-    const { node, pos } = columnsAtCursor;
+  const deleteColumn = () => {
+    if (!columnCtx || columnTotal <= 2) return;
+    const { layout, column } = columnCtx;
     editor
       .chain()
       .focus()
       .command(({ tr }) => {
-        tr.replaceWith(pos, pos + node.nodeSize, node.content);
+        tr.delete(column.pos, column.pos + column.node.nodeSize);
+        tr.setNodeMarkup(layout.pos, undefined, { ...layout.node.attrs, ratio: null });
+        return true;
+      })
+      .run();
+  };
+  const unwrapLayout = () => {
+    if (!columnCtx) return;
+    const { layout } = columnCtx;
+    const blocks: ProseNode[] = [];
+    layout.node.forEach((col) => col.forEach((child) => blocks.push(child)));
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        tr.replaceWith(layout.pos, layout.pos + layout.node.nodeSize, blocks);
+        return true;
+      })
+      .run();
+  };
+  const setLayoutRatio = (ratio: string) => {
+    if (!columnCtx) return;
+    const { layout } = columnCtx;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr }) => {
+        tr.setNodeMarkup(layout.pos, undefined, { ...layout.node.attrs, ratio: ratio || null });
         return true;
       })
       .run();
@@ -420,9 +488,12 @@ function Toolbar({
     ...(onPickImages
       ? [
           [
-            { icon: Columns2, label: "2 багана", run: () => setColumns("2"), active: inColumns && columnCount === "2" },
-            { icon: Columns3, label: "3 багана", run: () => setColumns("3"), active: inColumns && columnCount === "3" },
-            { icon: Rows2, label: "Баганыг болиулах", run: unwrapColumns, disabled: !inColumns },
+            { icon: Columns2, label: "2 багана оруулах", run: () => insertLayout(2), disabled: inLayout },
+            { icon: Columns3, label: "3 багана оруулах", run: () => insertLayout(3), disabled: inLayout },
+            { icon: Columns4, label: "4 багана оруулах", run: () => insertLayout(4), disabled: inLayout },
+            { icon: BetweenHorizontalEnd, label: "Баруун талд нь багана нэмэх", run: addColumn, disabled: !inLayout || columnTotal >= 4 },
+            { icon: Trash2, label: "Энэ баганыг устгах", run: deleteColumn, disabled: !inLayout || columnTotal <= 2 },
+            { icon: Rows2, label: "Баганыг задлах (энгийн текст болгох)", run: unwrapLayout, disabled: !inLayout },
           ],
         ]
       : []),
@@ -486,6 +557,20 @@ function Toolbar({
               {TEXT_ALIGNS.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Баганын харьцаа"
+              title="Баганын харьцаа (багана доторх курсороор)"
+              value={layoutRatio}
+              disabled={!inLayout || (COLUMN_RATIOS[columnTotal]?.length ?? 0) < 2}
+              onChange={(e) => setLayoutRatio(e.target.value)}
+              className="h-8 rounded-md border border-line bg-surface px-1.5 text-xs text-ink outline-none focus:border-brand disabled:opacity-40"
+            >
+              {(COLUMN_RATIOS[columnTotal] ?? COLUMN_RATIOS[2]).map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.id ? `Харьцаа ${r.label}` : "Харьцаа: тэнцүү"}
                 </option>
               ))}
             </select>

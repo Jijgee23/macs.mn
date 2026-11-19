@@ -79,7 +79,7 @@ async function Product({ params }: { params: PageProps<"/[lang]/buteegdehuun/[sl
   return (
     <ImageViewerProvider images={imageSrcs(html)} locale={locale}>
       <article className="container-wide py-10 sm:py-14">
-        <div className={`mx-auto ${html.includes('class="cols ') ? "max-w-5xl" : "max-w-3xl"}`}>
+        <div className={`mx-auto ${/class="(cols|cg) /.test(html) ? "max-w-5xl" : "max-w-3xl"}`}>
           <Link
             href={localeHref(locale, "/#products")}
             className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-ink"

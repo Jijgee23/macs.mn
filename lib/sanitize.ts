@@ -30,7 +30,7 @@ export function sanitizePostHtml(input: string) {
       ul: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
       ol: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
       blockquote: ["lh-tight", "lh-snug", "lh-relaxed", "lh-loose", "ta-center", "ta-right", "ta-justify"],
-      div: ["cols", "cols-2", "cols-3"],
+      div: ["cols", "cols-2", "cols-3", "cg", "cg-col", "cg-2", "cg-3", "cg-4", "cg-r-1-2", "cg-r-2-1", "cg-r-2-1-1", "cg-r-1-2-1", "cg-r-1-1-2"],
       img: ["img-w25", "img-w33", "img-w50", "img-w75", "img-w100", "img-left", "img-center", "img-right"],
     },
     allowedSchemes: ["https", "http", "mailto", "tel"],

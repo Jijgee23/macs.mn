@@ -262,6 +262,66 @@ section[id] {
     max-width: 100%;
   }
 }
+/* Real columns (Word-style): each column holds its own headings, lists, text and pictures. */
+.rich .cg {
+  display: grid;
+  gap: 1.5rem 2.25rem;
+  align-items: start;
+  margin-top: 1.75em;
+  margin-bottom: 1.75em;
+}
+.rich .cg-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.rich .cg-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rich .cg-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.rich .cg-r-1-2 {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+.rich .cg-r-2-1 {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+.rich .cg-r-2-1-1 {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+.rich .cg-r-1-2-1 {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+}
+.rich .cg-r-1-1-2 {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+}
+.rich .cg-col {
+  min-width: 0;
+}
+.rich .cg-col > * + * {
+  margin-top: 1.1em;
+}
+.rich .cg-col > :first-child,
+.rich .cg-col > h2:first-child,
+.rich .cg-col > h3:first-child {
+  margin-top: 0;
+}
+/* Editor only: show where the columns are. */
+.ProseMirror .cg-col {
+  outline: 1px dashed var(--line-strong);
+  outline-offset: 6px;
+  border-radius: 0.5rem;
+  min-height: 3rem;
+}
+@media (max-width: 767px) {
+  .rich .cg {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .rich .cg-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 /* Line spacing, alignment and text columns chosen in the editor. */
 .rich .lh-tight {
   line-height: 1.35;
