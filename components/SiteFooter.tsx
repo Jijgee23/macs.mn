@@ -39,6 +39,11 @@ export async function SiteFooter() {
             </Link>
           </p>
           <p>
+            <Link href={localeHref(locale, "/gereenii-huselt")} className="text-muted hover:text-ink">
+              {t.nav.contract}
+            </Link>
+          </p>
+          <p>
             <Link href={localeHref(locale, "/medee")} className="text-muted hover:text-ink">
               {t.nav.news}
             </Link>

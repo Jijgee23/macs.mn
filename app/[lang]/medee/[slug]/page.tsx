@@ -11,6 +11,7 @@ import type { SiteContent } from "@/content/schema";
 import { ShareButtons } from "@/components/ShareButtons";
 import { ImageViewerProvider, ViewerImage } from "@/components/ImageViewer";
 import { ReadingProgress } from "@/components/ReadingProgress";
+import type { Appearance } from "@/lib/post-appearance";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/medee/[slug]">): Promise<Metadata> {
   const { lang, slug } = await params;
@@ -62,6 +63,9 @@ export default async function PostPage({ params }: PageProps<"/[lang]/medee/[slu
   );
 }
 
+const WIDTH: Record<Appearance["width"], string> = { narrow: "max-w-2xl", normal: "max-w-3xl", wide: "max-w-4xl" };
+const TEXT: Record<Appearance["text"], string> = { sm: "rich-sm", md: "", lg: "rich-lg" };
+
 async function Post({
   locale,
   t,
@@ -100,14 +104,19 @@ async function Post({
   const url = postUrl(siteOrigin(), slug, locale);
 
   const related = (await listPosts(locale, undefined, 4)).filter((p) => p.slug !== slug).slice(0, 3);
-  const images = [...(post.cover ? [post.cover] : []), ...post.gallery];
-  const galleryOffset = post.cover ? 1 : 0;
+  const look = post.appearance;
+  const left = look.header === "left";
+  const col = WIDTH[look.width];
+  // A hidden cover is left out of the full-screen viewer too, so indexes stay aligned.
+  const showCover = !!post.cover && look.cover !== "hidden";
+  const images = [...(showCover ? [post.cover!] : []), ...post.gallery];
+  const galleryOffset = showCover ? 1 : 0;
 
   return (
     <ImageViewerProvider images={images} locale={locale}>
-      <ReadingProgress targetId="post-article" />
+      {look.progress && <ReadingProgress targetId="post-article" />}
       <article id="post-article" className="container-wide py-10 sm:py-14">
-        <div className="mx-auto max-w-3xl">
+        <div className={`mx-auto ${col}`}>
           <Link
             href={localeHref(locale, "/medee")}
             className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-ink"
@@ -116,65 +125,80 @@ async function Post({
           </Link>
         </div>
 
-        <header className="mx-auto mt-8 max-w-3xl text-center">
-          <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-sm">
+        <header className={`mx-auto mt-8 ${col} ${left ? "text-left" : "text-center"}`}>
+          <p className={`flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm ${left ? "justify-start" : "justify-center"}`}>
             <span
               className={`rounded-full px-3 py-1 font-semibold ${post.category === "TIP" ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "bg-brand-soft text-brand"}`}
             >
               {post.category === "TIP" ? t.news.tipLabel : t.news.newsLabel}
             </span>
-            <time dateTime={post.publishedAt} className="whitespace-nowrap text-muted">
-              {date}
-            </time>
-            <span aria-hidden className="text-line-strong">
-              ·
-            </span>
-            <span className="inline-flex items-center gap-1 whitespace-nowrap text-muted">
-              <Clock className="size-3.5" aria-hidden />
-              {t.news.readTime.replace("{n}", String(post.readMinutes))}
-            </span>
+            {look.meta && (
+              <>
+                <time dateTime={post.publishedAt} className="whitespace-nowrap text-muted">
+                  {date}
+                </time>
+                <span aria-hidden className="text-line-strong">
+                  ·
+                </span>
+                <span className="inline-flex items-center gap-1 whitespace-nowrap text-muted">
+                  <Clock className="size-3.5" aria-hidden />
+                  {t.news.readTime.replace("{n}", String(post.readMinutes))}
+                </span>
+              </>
+            )}
           </p>
           <h1 className="mt-5 text-3xl leading-[1.15] font-bold tracking-[-0.02em] text-balance sm:text-5xl">
             {post.title}
           </h1>
           {post.excerpt && (
-            <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted text-pretty sm:text-xl">
+            <p className={`mt-5 text-lg leading-relaxed text-muted text-pretty sm:text-xl ${left ? "" : "mx-auto max-w-2xl"}`}>
               {post.excerpt}
             </p>
           )}
-          <span aria-hidden className="mx-auto mt-8 block h-1 w-12 rounded-full bg-brand" />
+          <span aria-hidden className={`mt-8 block h-1 w-12 rounded-full bg-brand ${left ? "" : "mx-auto"}`} />
         </header>
 
-        {post.cover && (
+        {showCover && look.cover === "framed" && (
           <div className="relative mx-auto mt-10 aspect-[16/9] max-w-5xl overflow-hidden rounded-3xl bg-soft shadow-card ring-1 ring-line">
             {/* Blurred copy of the cover fills the frame so any image shape sits centred and balanced. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={post.cover}
+              src={post.cover!}
               alt=""
               aria-hidden
               className="absolute inset-0 size-full scale-110 object-cover opacity-50 blur-2xl"
             />
             <ViewerImage
               index={0}
-              src={post.cover}
-              width={post.dims[post.cover]?.width}
-              height={post.dims[post.cover]?.height}
+              src={post.cover!}
+              width={post.dims[post.cover!]?.width}
+              height={post.dims[post.cover!]?.height}
               priority
               className="relative flex size-full items-center justify-center"
               imgClassName="h-auto max-h-full w-auto max-w-full"
             />
           </div>
         )}
+        {showCover && look.cover === "wide" && (
+          <ViewerImage
+            index={0}
+            src={post.cover!}
+            width={post.dims[post.cover!]?.width}
+            height={post.dims[post.cover!]?.height}
+            priority
+            className="mx-auto mt-10 block max-w-5xl overflow-hidden rounded-3xl bg-soft shadow-card ring-1 ring-line"
+            imgClassName="h-auto w-full"
+          />
+        )}
 
-        <div className="mx-auto mt-10 max-w-3xl sm:mt-12">
-          <div className="rich" dangerouslySetInnerHTML={{ __html: post.body }} />
+        <div className={`mx-auto mt-10 sm:mt-12 ${col}`}>
+          <div className={`rich ${TEXT[look.text]}`} dangerouslySetInnerHTML={{ __html: post.body }} />
           {post.gallery.length > 0 && (
             <ul
-              className={`mt-12 grid gap-3 [contain-intrinsic-size:auto_600px] [content-visibility:auto] ${post.gallery.length === 1 ? "" : "grid-cols-2"}`}
+              className={`mt-12 grid gap-3 [contain-intrinsic-size:auto_600px] [content-visibility:auto] ${post.gallery.length === 1 || look.gallery === "stack" ? "" : "grid-cols-2"}`}
             >
               {post.gallery.map((src, i) => {
-                const single = post.gallery.length === 1;
+                const single = post.gallery.length === 1 || look.gallery === "stack";
                 // An odd last photo spans both columns so the grid stays balanced.
                 const wide = !single && post.gallery.length % 2 === 1 && i === post.gallery.length - 1;
                 return (
@@ -195,14 +219,16 @@ async function Post({
               })}
             </ul>
           )}
-          <div className="mt-12 flex flex-col items-center gap-4 border-t border-line pt-8 text-center">
-            <span className="text-sm font-semibold">{t.news.share}</span>
-            <ShareButtons url={url} title={post.title} copyLabel={t.news.copyLink} copiedLabel={t.news.copied} />
-          </div>
+          {look.share && (
+            <div className="mt-12 flex flex-col items-center gap-4 border-t border-line pt-8 text-center">
+              <span className="text-sm font-semibold">{t.news.share}</span>
+              <ShareButtons url={url} title={post.title} copyLabel={t.news.copyLink} copiedLabel={t.news.copied} />
+            </div>
+          )}
         </div>
       </article>
 
-      {related.length > 0 && (
+      {look.related && related.length > 0 && (
         <section className="border-t border-line bg-soft [contain-intrinsic-size:auto_520px] [content-visibility:auto]">
           <div className="container-wide py-12 sm:py-16">
             <h2 className="text-center text-2xl font-bold tracking-tight">{t.news.relatedTitle}</h2>

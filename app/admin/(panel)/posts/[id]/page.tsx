@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { parseAppearance } from "@/lib/post-appearance";
 import { PostForm } from "@/components/admin/PostForm";
 import { Loading } from "@/components/admin/Requests";
 
@@ -46,6 +47,7 @@ async function EditPost({ params }: { params: PageProps<"/admin/posts/[id]">["pa
         bodyEn: p.bodyEn ?? "",
         coverId: p.coverId,
         galleryIds: p.galleryIds,
+        appearance: parseAppearance(p.appearance),
       }}
     />
   );

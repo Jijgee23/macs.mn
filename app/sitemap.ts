@@ -5,7 +5,7 @@ import { siteOrigin } from "@/lib/share";
 /** Main pages in both languages plus every published post (English only when translated). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = siteOrigin();
-  const pages = ["/", "/une-sanal", "/holboo-barih", "/medee"].flatMap((path) => [
+  const pages = ["/", "/une-sanal", "/gereenii-huselt", "/holboo-barih", "/medee"].flatMap((path) => [
     { url: `${origin}${path === "/" ? "" : path}`, alternates: { languages: { en: `${origin}/en${path === "/" ? "" : path}` } } },
     { url: `${origin}/en${path === "/" ? "" : path}` },
   ]);

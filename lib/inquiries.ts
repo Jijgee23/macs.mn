@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { loadAllContent } from "@/lib/content";
-import { notifyNewContact, notifyNewQuote, notifySupportReceived } from "@/lib/mail";
+import { notifyNewContact, notifyNewContract, notifyNewQuote, notifySupportReceived } from "@/lib/mail";
 import { verifyRecaptcha } from "@/lib/recaptcha";
 import {
   contactTopics,
@@ -65,6 +65,65 @@ const quoteSchema = z.object({
   company: optionalText(200),
   message: optionalText(2000),
   products: z.array(z.string().trim().max(120)).max(30).catch([]),
+});
+
+const regNoText = z.string().trim().min(1, code("required")).transform((v) => v.replace(/\s+/g, "").toUpperCase());
+/** Organization register: 7 digits. */
+const orgRegNo = regNoText.refine((v) => /^\d{7}$/.test(v), code("invalidRegNo"));
+/** Individual register: 2 letters + 8 digits (e.g. УБ12345678). */
+const personRegNo = regNoText.refine((v) => /^\p{L}{2}\d{8}$/u.test(v), code("invalidRegNo"));
+const userCount = z
+  .string()
+  .trim()
+  .min(1, code("required"))
+  .refine((v) => /^\d{1,6}$/.test(v) && Number(v) >= 1, code("invalidNumber"))
+  .transform(Number);
+
+const requiredPhone = z.string().trim().min(1, code("required")).refine(isPhone, code("invalidPhone"));
+
+const contractCommon = {
+  address: requiredText(300),
+  phone: requiredPhone,
+  email,
+  products: z.array(z.string().trim().max(120)).max(30).catch([]),
+  userCount,
+  message: optionalText(2000),
+};
+
+const orgContractSchema = z.object({
+  regNo: orgRegNo,
+  orgName: requiredText(200),
+  approverLastName: requiredText(80),
+  approverFirstName: requiredText(80),
+  approverPosition: requiredText(120),
+  approverPhone: requiredPhone,
+  repLastName: requiredText(80),
+  repFirstName: requiredText(80),
+  repPosition: requiredText(120),
+  repPhone: requiredPhone,
+  ...contractCommon,
+});
+
+const personContractSchema = z.object({
+  regNo: personRegNo,
+  personLastName: requiredText(80),
+  personFirstName: requiredText(80),
+  ...contractCommon,
+});
+
+/** An individual signs for themselves: stored like an organization whose name, approver and representative are that person. */
+const personAsContract = ({ personLastName: last, personFirstName: first, ...rest }: z.infer<typeof personContractSchema>) => ({
+  ...rest,
+  applicantType: "PERSON",
+  orgName: `${last} ${first}`,
+  approverLastName: last,
+  approverFirstName: first,
+  approverPosition: "",
+  approverPhone: rest.phone,
+  repLastName: last,
+  repFirstName: first,
+  repPosition: "",
+  repPhone: rest.phone,
 });
 
 const contactSchema = z.object({
@@ -128,9 +187,9 @@ export async function createQuote(input: unknown, locale: Locale, captchaToken: 
   if (!parsed.success) return invalid(parsed.error);
 
   try {
-    // Only products the site actually lists (plus "other") are accepted.
+    // Only products the site actually lists are accepted.
     const { content } = await loadAllContent();
-    const allowed = new Set([...content[locale].products.items.filter((p) => !p.hidden).map((p) => p.name), "other"]);
+    const allowed = new Set([...content[locale].products.items.filter((p) => !p.hidden).map((p) => p.name)]);
     parsed.data.products = [...new Set(parsed.data.products)].filter((p) => allowed.has(p));
 
     if (ip && (await db.quoteRequest.count({ where: { ip, createdAt: { gte: since() } } })) >= RATE_LIMIT_MAX) {
@@ -141,6 +200,38 @@ export async function createQuote(input: unknown, locale: Locale, captchaToken: 
     return { ok: true };
   } catch (err) {
     console.error("[inquiry] failed to save quote request", err);
+    return { ok: false, error: "unavailable" };
+  }
+}
+
+export async function createContract(input: unknown, locale: Locale, captchaToken: string): Promise<InquiryResult> {
+  const ip = await clientIp();
+  if (!(await verifyRecaptcha(captchaToken, ip))) return { ok: false, error: "captcha" };
+
+  const isPerson = (input as { type?: unknown } | null)?.type === "PERSON";
+  const result = isPerson ? personContractSchema.safeParse(input) : orgContractSchema.safeParse(input);
+  if (!result.success) return invalid(result.error);
+  const parsed = {
+    data: isPerson
+      ? personAsContract(result.data as z.infer<typeof personContractSchema>)
+      : { ...(result.data as z.infer<typeof orgContractSchema>), applicantType: "ORG" },
+  };
+
+  try {
+    // Only products the site actually lists are accepted, and at least one must be chosen.
+    const { content } = await loadAllContent();
+    const allowed = new Set(content[locale].products.items.filter((p) => !p.hidden).map((p) => p.name));
+    const products = [...new Set(parsed.data.products)].filter((p) => allowed.has(p));
+    if (products.length === 0) return { ok: false, errors: { products: ["required"] } };
+
+    if (ip && (await db.contractRequest.count({ where: { ip, createdAt: { gte: since() } } })) >= RATE_LIMIT_MAX) {
+      return { ok: false, error: "rateLimited" };
+    }
+    const record = await db.contractRequest.create({ data: { ...parsed.data, products, locale, ip } });
+    after(() => notifyNewContract(record));
+    return { ok: true };
+  } catch (err) {
+    console.error("[inquiry] failed to save contract request", err);
     return { ok: false, error: "unavailable" };
   }
 }

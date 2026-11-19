@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Open the dev server from other devices on the LAN (phone, another PC), e.g. http://192.168.88.114:3000.
+  allowedDevOrigins: ["192.168.*.*"],
   experimental: {
     agentFeedback: true,
     serverActions: {

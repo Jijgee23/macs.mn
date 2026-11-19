@@ -8,6 +8,7 @@ import { requireAdmin } from "@/lib/auth";
 import { POSTS_TAG } from "@/lib/posts";
 import { sanitizePostHtml, textLength } from "@/lib/sanitize";
 import { isSlug } from "@/lib/slug";
+import { parseAppearance, type Appearance } from "@/lib/post-appearance";
 
 export type PostInput = {
   category: "NEWS" | "TIP";
@@ -21,6 +22,7 @@ export type PostInput = {
   bodyEn: string;
   coverId: string | null;
   galleryIds: string[];
+  appearance: Appearance;
 };
 
 export type SavePostResult = { ok: boolean; id?: string; errors?: string[] };
@@ -37,6 +39,7 @@ const schema = z.object({
   bodyEn: z.string(),
   coverId: z.string().nullable(),
   galleryIds: z.array(z.string()).max(40, "Зураг 40-өөс ихгүй байна"),
+  appearance: z.unknown(),
 });
 
 /** First ~200 characters of the body text, for an empty excerpt. */
@@ -86,6 +89,7 @@ export async function savePost(id: string | null, input: PostInput): Promise<Sav
     bodyEn: hasEn ? bodyEn : null,
     coverId: d.coverId,
     galleryIds,
+    appearance: parseAppearance(d.appearance),
     // First publish stamps the date; later edits keep it.
     publishedAt: d.status === "PUBLISHED" ? (existing?.publishedAt ?? new Date()) : (existing?.publishedAt ?? null),
     updatedBy: admin.email,

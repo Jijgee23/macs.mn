@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FileText, LifeBuoy, MessageSquare, PenLine } from "lucide-react";
+import { FileSignature, FileText, LifeBuoy, MessageSquare, PenLine } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { inquiryLabels } from "@/lib/mail";
@@ -24,11 +24,13 @@ export default function DashboardPage() {
 
 async function Dashboard() {
   const admin = await requireAdmin();
-  const [newQuotes, newMessages, newSupport, quotes, messages, support, recentEdits, label] = await Promise.all([
+  const [newQuotes, newContracts, newMessages, newSupport, quotes, contracts, messages, support, recentEdits, label] = await Promise.all([
     db.quoteRequest.count({ where: { status: "NEW" } }),
+    db.contractRequest.count({ where: { status: "NEW" } }),
     db.contactMessage.count({ where: { status: "NEW" } }),
     db.supportRequest.count({ where: { status: "NEW" } }),
     db.quoteRequest.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+    db.contractRequest.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
     db.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
     db.supportRequest.findMany({ orderBy: { createdAt: "desc" }, take: 5, omit: { message: true } }),
     db.contentSection.findMany({
@@ -45,6 +47,7 @@ async function Dashboard() {
 
   const tiles = [
     { href: "/admin/requests?status=NEW", label: "Шинэ үнийн санал", value: newQuotes, icon: FileText },
+    { href: "/admin/contracts?status=NEW", label: "Шинэ гэрээний хүсэлт", value: newContracts, icon: FileSignature },
     { href: "/admin/messages?status=NEW", label: "Шинэ санал хүсэлт", value: newMessages, icon: MessageSquare },
     { href: "/admin/support?status=NEW", label: "Шинэ хэрэглэгчийн хүсэлт", value: newSupport, icon: LifeBuoy },
   ];
@@ -53,7 +56,7 @@ async function Dashboard() {
     <>
       <p className="mt-1 text-sm text-muted">Сайн байна уу, {admin.name ?? admin.email}.</p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((t) => (
           <Link
             key={t.href}
@@ -71,7 +74,7 @@ async function Dashboard() {
         ))}
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-8 grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         <section className="rounded-2xl border border-line bg-surface p-5">
           <h2 className="font-semibold">Сүүлийн үнийн санал</h2>
           <ul className="mt-3 divide-y divide-line text-sm">
@@ -89,6 +92,27 @@ async function Dashboard() {
             ))}
           </ul>
           <Link href="/admin/requests" className="mt-3 inline-block text-sm text-brand hover:underline">
+            Бүгдийг харах →
+          </Link>
+        </section>
+
+        <section className="rounded-2xl border border-line bg-surface p-5">
+          <h2 className="font-semibold">Сүүлийн гэрээний хүсэлт</h2>
+          <ul className="mt-3 divide-y divide-line text-sm">
+            {contracts.length === 0 && <li className="py-3 text-muted">Хүсэлт алга.</li>}
+            {contracts.map((c) => (
+              <li key={c.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{c.orgName}</span>
+                  <span className="block truncate text-xs text-muted">
+                    {c.applicantType === "PERSON" ? "Хувь хүн" : "Байгууллага"} · {c.products.join(", ")}
+                  </span>
+                </span>
+                <StatusBadge status={c.status} />
+              </li>
+            ))}
+          </ul>
+          <Link href="/admin/contracts" className="mt-3 inline-block text-sm text-brand hover:underline">
             Бүгдийг харах →
           </Link>
         </section>

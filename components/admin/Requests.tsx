@@ -87,7 +87,7 @@ export function RequestCard({
   subtitle,
   children,
 }: {
-  kind: "quote" | "contact";
+  kind: "quote" | "contact" | "contract";
   item: Item;
   title: string;
   subtitle?: string | null;

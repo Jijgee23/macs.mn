@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, ChevronRight, Crop, ExternalLink, ImagePlus, Loader2, X } from "lucide-react";
 import { savePost, type PostInput } from "@/app/admin/posts-actions";
 import { slugify } from "@/lib/slug";
+import { appearanceChoices, appearanceToggles, defaultAppearance, type Appearance } from "@/lib/post-appearance";
 import { CropDialog } from "./CropDialog";
 import { RichEditor } from "./RichEditor";
 import { uploadImage } from "./upload";
@@ -96,6 +97,8 @@ export function PostForm({ id, initial }: { id: string | null; initial: PostInpu
     setGalleryBusy(false);
     input.value = "";
   };
+
+  const setLook = (patch: Partial<Appearance>) => set("appearance", { ...post.appearance, ...patch });
 
   const removeGallery = (gid: string) => set("galleryIds", post.galleryIds.filter((x) => x !== gid));
 
@@ -262,6 +265,54 @@ export function PostForm({ id, initial }: { id: string | null; initial: PostInpu
             <input ref={galleryInput} type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(e) => onGallery(e.target)} />
             {galleryError && <p className="mt-1 text-xs text-brand">{galleryError}</p>}
           </Field>
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-line bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold">Харагдах байдал</span>
+            <button
+              type="button"
+              onClick={() => set("appearance", defaultAppearance)}
+              className="text-xs font-medium text-muted hover:text-brand"
+            >
+              Анхны загвар
+            </button>
+          </div>
+          {appearanceChoices.map((c) => (
+            <Field key={c.key} label={c.label}>
+              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={c.label}>
+                {c.options.map((o) => {
+                  const on = post.appearance[c.key] === o.id;
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setLook({ [c.key]: o.id } as Partial<Appearance>)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${on ? "border-brand bg-brand-soft text-brand" : "border-line text-muted hover:text-ink"}`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          ))}
+          <div className="space-y-2 border-t border-line pt-3">
+            {appearanceToggles.map((t) => (
+              <label key={t.key} className="flex cursor-pointer items-center justify-between gap-3 text-sm">
+                {t.label}
+                <input
+                  type="checkbox"
+                  checked={post.appearance[t.key]}
+                  onChange={(e) => setLook({ [t.key]: e.target.checked } as Partial<Appearance>)}
+                  className="size-4 accent-[#b91c1c]"
+                />
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-muted">Нийтлэлийн хуудасны харагдах байдал. Хадгалсны дараа сайт дээр шинэчлэгдэнэ.</p>
         </div>
 
         <div className="space-y-4 rounded-2xl border border-line bg-surface p-5">

@@ -8,10 +8,16 @@ import sanitizeHtml from "sanitize-html";
  */
 export function sanitizePostHtml(input: string) {
   return sanitizeHtml(input, {
-    allowedTags: ["p", "br", "h2", "h3", "strong", "b", "em", "i", "u", "s", "a", "ul", "ol", "li", "blockquote", "img", "hr", "code", "pre"],
+    allowedTags: ["p", "br", "h2", "h3", "strong", "b", "em", "i", "u", "s", "a", "ul", "ol", "li", "blockquote", "img", "hr", "code", "pre", "span"],
     allowedAttributes: {
       a: ["href", "target", "rel"],
-      img: ["src", "alt", "width", "height"],
+      img: ["src", "alt", "width", "height", "class", "style"],
+      span: ["class"],
+    },
+    allowedStyles: { img: { width: [/^\d{1,3}%$/] } },
+    allowedClasses: {
+      span: ["fs-xs", "fs-sm", "fs-lg", "fs-xl", "fs-2xl", "fs-3xl"],
+      img: ["img-w25", "img-w33", "img-w50", "img-w75", "img-w100", "img-left", "img-center", "img-right"],
     },
     allowedSchemes: ["https", "http", "mailto", "tel"],
     allowedSchemesByTag: { img: ["https"] },
@@ -30,3 +36,17 @@ export function sanitizePostHtml(input: string) {
 
 /** Plain-text length check, so "<p></p>" doesn't count as content. */
 export const textLength = (html: string) => sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} }).trim().length;
+
+/**
+ * Wraps runs of two or more consecutive, non-floated pictures in <div class="img-row"> so they sit side
+ * by side, centred. Expects HTML already cleaned by sanitizePostHtml (its <img> tags have a fixed shape).
+ */
+export function groupImageRows(html: string) {
+  const img = String.raw`<img\b(?![^>]*\bimg-(?:left|right)\b)[^>]*>`;
+  return html.replace(new RegExp(String.raw`(?:${img}\s*){2,}`, "g"), (run) => `<div class="img-row">${run.trim()}</div>`);
+}
+
+/** Picture addresses in document order (the order the full-screen viewer pages through). */
+export function imageSrcs(html: string) {
+  return [...html.matchAll(/<img\b[^>]*?\bsrc="([^"]+)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
+}

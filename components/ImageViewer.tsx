@@ -28,6 +28,11 @@ const LABELS = {
 type Ctx = { open: (index: number) => void; locale: Locale };
 const ViewerContext = createContext<Ctx | null>(null);
 
+/** Opens the surrounding provider's viewer, or does nothing outside one. */
+export function useImageViewer() {
+  return useContext(ViewerContext)?.open;
+}
+
 /**
  * Wrap a page section; every <ViewerImage index={n}> inside opens the same full-screen
  * viewer on `images[n]`, so a cover and a gallery can be flipped through together.

@@ -9,6 +9,7 @@ const links = [
   { href: "/admin/posts", label: "Нийтлэл" },
   { href: "/admin/content/faq", label: "FAQ" },
   { href: "/admin/requests", label: "Үнийн санал" },
+  { href: "/admin/contracts", label: "Гэрээний хүсэлт" },
   { href: "/admin/messages", label: "Санал хүсэлт" },
   { href: "/admin/support", label: "Хэрэглэгчийн хүсэлт" },
   { href: "/admin/notify", label: "Мэдэгдлийн имэйл" },

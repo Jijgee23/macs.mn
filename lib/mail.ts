@@ -1,6 +1,6 @@
 import "server-only";
 import nodemailer from "nodemailer";
-import type { ContactMessage, QuoteRequest, SupportRequest, SupportStatus } from "@prisma/client";
+import type { ContactMessage, ContractRequest, QuoteRequest, SupportRequest, SupportStatus } from "@prisma/client";
 import type { ContactTopic, QuoteProductId, SupportType, SupportUrgency } from "@/content/common";
 import { loadAllContent } from "@/lib/content";
 import { db } from "@/lib/db";
@@ -47,6 +47,17 @@ export async function inquiryLabels(locale: Locale = "mn") {
 export const mailCopy = {
   mn: {
     quoteKind: "Үнийн саналын хүсэлт",
+    contractKind: "Гэрээний хүсэлт",
+    regNo: "Регистрийн дугаар",
+    orgName: "Байгууллагын нэр",
+    approver: "Гэрээ батлах хүн",
+    representative: "Гэрээг төлөөлөх хүн",
+    address: "Хаяг",
+    userCount: "Хэрэглэгчийн тоо",
+    applicantType: "Төрөл",
+    typeOrg: "Байгууллага",
+    typePerson: "Хувь хүн",
+    personName: "Овог, нэр",
     contactKind: "Санал хүсэлт",
     title: "Таны хүсэлтийг хүлээн авлаа",
     intro: (hours: string) =>
@@ -83,6 +94,17 @@ export const mailCopy = {
   },
   en: {
     quoteKind: "Price quote request",
+    contractKind: "Contract request",
+    regNo: "Register number",
+    orgName: "Organization name",
+    approver: "Contract approver",
+    representative: "Contract representative",
+    address: "Address",
+    userCount: "Number of users",
+    applicantType: "Type",
+    typeOrg: "Organization",
+    typePerson: "Individual",
+    personName: "Full name",
     contactKind: "Message",
     title: "We've received your request",
     intro: (hours: string) =>
@@ -144,15 +166,21 @@ function baseModel(locale: Locale, kicker: string, label: Awaited<ReturnType<typ
  */
 export const PRIMARY_NOTIFY_EMAIL = "contact@infosystems.mn";
 
+/**
+ * contact@ is the real team mailbox: only the production site uses it, as a recipient and as the
+ * Reply-To of customer emails. Local and preview runs leave it out (see DEV_MAIL_TO in deliver).
+ */
+const primaryEmails = () => (process.env.NODE_ENV === "production" ? [PRIMARY_NOTIFY_EMAIL] : []);
+
 /** contact@ plus the addresses managed in /admin/notify, without duplicates. */
 async function teamRecipients() {
   try {
     const extra = await db.notifyRecipient.findMany({ select: { email: true }, orderBy: { createdAt: "asc" } });
-    return [...new Set([PRIMARY_NOTIFY_EMAIL, ...extra.map((r) => r.email)])];
+    return [...new Set([...primaryEmails(), ...extra.map((r) => r.email)])];
   } catch (err) {
     // Still reach contact@ if the database is unavailable.
     console.error("[notify] could not load recipients from /admin/notify", err);
-    return [PRIMARY_NOTIFY_EMAIL];
+    return primaryEmails();
   }
 }
 
@@ -160,6 +188,17 @@ type Envelope = { to: string[]; replyTo?: string[] };
 
 /** Never throws — the request is already saved and listed in /admin. */
 async function deliver(id: string, subject: string, model: MailModel, { to, replyTo }: Envelope) {
+  // Local and preview runs mail only DEV_MAIL_TO (set in .env), never customers or the team.
+  const dev = process.env.NODE_ENV === "production" ? null : (process.env.DEV_MAIL_TO ?? "").split(/[\s,;]+/).filter(Boolean);
+  if (dev) {
+    to = dev;
+    replyTo = undefined;
+    subject = `[DEV] ${subject}`;
+  }
+  if (!to.length) {
+    console.warn(`[notify] no recipients; skipped email for ${id}`);
+    return;
+  }
   const mailer = transport();
   if (!mailer) {
     console.warn(`[notify] SMTP not configured; skipped email for ${id}`);
@@ -206,14 +245,14 @@ async function notifyNew(id: string, subject: string, model: MailModel, visitors
   const team = await teamRecipients();
   await Promise.all([
     deliver(id, subject, teamModel(model, visitors, adminPath), { to: team, replyTo: visitors }),
-    visitors.length > 0 && deliver(`${id} (confirmation)`, subject, model, { to: visitors, replyTo: [PRIMARY_NOTIFY_EMAIL] }),
+    visitors.length > 0 && deliver(`${id} (confirmation)`, subject, model, { to: visitors, replyTo: primaryEmails() }),
   ]);
 }
 
 /** Email to a customer only (status updates); replies go to contact@. */
 async function notifyCustomer(id: string, subject: string, model: MailModel, to: string[]) {
   if (!to.length) return;
-  await deliver(id, subject, model, { to, replyTo: [PRIMARY_NOTIFY_EMAIL] });
+  await deliver(id, subject, model, { to, replyTo: primaryEmails() });
 }
 
 export async function notifyNewQuote(quote: QuoteRequest) {
@@ -233,6 +272,36 @@ export async function notifyNewQuote(quote: QuoteRequest) {
   };
   const who = quote.company ?? quote.name ?? quote.email ?? quote.phone;
   await notifyNew(`quote ${quote.id}`, `${c.quoteKind}${who ? ` — ${who}` : ""} · MACS ERP`, model, quote.email ? [quote.email] : [], "/admin/requests");
+}
+
+export async function notifyNewContract(contract: ContractRequest) {
+  const locale = localeOf(contract.locale);
+  const c = mailCopy[locale];
+  const label = await inquiryLabels(locale);
+  const person = (last: string, first: string, position: string, phone: string) =>
+    `${last} ${first} — ${position}, ${phone}`;
+  const isPerson = contract.applicantType === "PERSON";
+  const model: MailModel = {
+    ...baseModel(locale, c.contractKind, label),
+    fields: [
+      { label: c.applicantType, value: isPerson ? c.typePerson : c.typeOrg },
+      { label: isPerson ? c.personName : c.orgName, value: contract.orgName },
+      { label: c.regNo, value: contract.regNo },
+      ...(isPerson
+        ? []
+        : [
+            { label: c.approver, value: person(contract.approverLastName, contract.approverFirstName, contract.approverPosition, contract.approverPhone) },
+            { label: c.representative, value: person(contract.repLastName, contract.repFirstName, contract.repPosition, contract.repPhone) },
+          ]),
+      { label: c.address, value: contract.address },
+      { label: c.phone, value: contract.phone },
+      { label: c.email, value: contract.email },
+      { label: c.products, value: contract.products.join(", ") },
+      { label: c.userCount, value: String(contract.userCount) },
+    ],
+    message: { label: c.message, value: contract.message },
+  };
+  await notifyNew(`contract ${contract.id}`, `${c.contractKind} — ${contract.orgName} · MACS ERP`, model, [contract.email], "/admin/contracts");
 }
 
 export async function notifyNewContact(message: ContactMessage) {

@@ -19,6 +19,9 @@ export const metadata: Metadata = { title: "Контент засах" };
  * built-in content (which matches the page) before handing them to the editor. Text and on/off fields
  * the built-in content has but a saved list item lacks are added empty/off.
  */
+/** Fields removed from the site (e.g. the old "Бусад систем" product group); saved copies are not shown any more. */
+const REMOVED_FIELDS = new Set(["group", "others", "otherTitle", "alsoLabel", "aboutLabel", "other"]);
+
 function orderLike(value: unknown, template: unknown): unknown {
   if (Array.isArray(value)) {
     const item = Array.isArray(template) ? template[0] : undefined;
@@ -29,7 +32,7 @@ function orderLike(value: unknown, template: unknown): unknown {
     const t = template as Record<string, unknown>;
     // List items saved before a text field existed lack it (lists are replaced whole, not merged);
     // add it empty so the editor shows it.
-    const keys = [...Object.keys(t).filter((k) => k in v || typeof t[k] === "string" || typeof t[k] === "boolean"), ...Object.keys(v).filter((k) => !(k in t))];
+    const keys = [...Object.keys(t).filter((k) => k in v || typeof t[k] === "string" || typeof t[k] === "boolean"), ...Object.keys(v).filter((k) => !(k in t) && !REMOVED_FIELDS.has(k))];
     return Object.fromEntries(keys.map((k) => [k, k in v ? orderLike(v[k], t[k]) : typeof t[k] === "boolean" ? false : ""]));
   }
   return value;

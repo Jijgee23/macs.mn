@@ -3,6 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import type { PostCategory } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { Locale } from "@/lib/locale";
+import { parseAppearance, type Appearance } from "@/lib/post-appearance";
 
 /** Cache tag for published posts; post saves/deletes call updateTag(POSTS_TAG). */
 export const POSTS_TAG = "posts";
@@ -18,6 +19,7 @@ export type PublicPost = {
   /** Pixel size of the cover and gallery images by url, so the page can reserve their space. */
   dims: Record<string, { width: number; height: number }>;
   readMinutes: number;
+  appearance: Appearance;
   publishedAt: string;
   hasEn: boolean;
 };
@@ -102,6 +104,7 @@ function toPublic(p: Row, locale: Locale, dims: PublicPost["dims"] = {}): Public
     gallery: p.galleryIds.map((id) => `/media/${id}`),
     dims,
     readMinutes: readMinutes(body),
+    appearance: parseAppearance(p.appearance),
     publishedAt: (p.publishedAt ?? p.createdAt).toISOString(),
     hasEn: !!p.titleEn,
   };

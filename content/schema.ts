@@ -71,6 +71,7 @@ export const sectionSchemas = {
     news: text,
     docs: text,
     quote: text,
+    contract: text,
     menu: text,
     mainNav: text,
     mobileNav: text,
@@ -109,20 +110,25 @@ export const sectionSchemas = {
           purpose: text,
           highlight: text,
           href: optionalLink,
+          /** Mobile apps: App Store (iOS) and Google Play (Android) links. */
+          appStore: optionalLink,
+          playStore: optionalLink,
           hidden: z.boolean().default(false),
           comingSoon: z.boolean().default(false),
-          /** Where it sits on the home page; "" = by order (1st main, next two featured, rest other). */
-          group: z.enum(["", "main", "featured", "other"]).default(""),
           logo: optionalLogo,
+          /** Longer description shown on the product's own page; empty = the card has no detail page. */
+          /** Uploaded brochure (PDF, PowerPoint ...); opened from the card when there is no detail page. */
+          brochure: z
+            .string()
+            .trim()
+            .refine((v) => v === "" || /^\/media\/[a-z0-9]{20,32}$/.test(v), "Файл зөвхөн админаар оруулсан байна")
+            .default(""),
+          details: z.string().trim().max(8000, "Тайлбар хэт урт").default(""),
         }),
       )
       .min(1),
     moreLabel: text,
     comingSoonLabel: text,
-    aboutLabel: text,
-    otherTitle: text,
-    alsoLabel: text,
-    others: z.array(text),
   }),
   modules: z.object({
     eyebrow: text,
@@ -197,7 +203,10 @@ export const sectionSchemas = {
       name: text,
       company: text,
       productsLegend: text,
-      products: fixedKeys(quoteProductIds, text),
+      products: z.preprocess(
+        (v) => (v && typeof v === "object" ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== "other")) : v),
+        fixedKeys(quoteProductIds, text),
+      ),
       message: text,
       messagePlaceholder: text,
       submit: text,

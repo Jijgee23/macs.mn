@@ -162,7 +162,7 @@ export async function saveSection(key: string, payload: string): Promise<SaveRes
 /* ---------- Requests ---------- */
 
 const updateSchema = z.object({
-  kind: z.enum(["quote", "contact"]),
+  kind: z.enum(["quote", "contact", "contract"]),
   id: z.string().min(1),
   status: z.enum(["NEW", "CONTACTED", "CLOSED"]),
   note: z
@@ -188,6 +188,9 @@ export async function updateRequest(formData: FormData) {
   if (kind === "quote") {
     await db.quoteRequest.update({ where: { id }, data });
     revalidatePath("/admin/requests");
+  } else if (kind === "contract") {
+    await db.contractRequest.update({ where: { id }, data });
+    revalidatePath("/admin/contracts");
   } else {
     await db.contactMessage.update({ where: { id }, data });
     revalidatePath("/admin/messages");

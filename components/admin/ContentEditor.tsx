@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, Check, Eye, EyeOff, Hourglass, ImagePlus, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronUp, Pencil, Eye, EyeOff, Hourglass, FileText, ImagePlus, Plus, Trash2 } from "lucide-react";
 import { saveSection } from "@/app/admin/actions";
 import { fieldLabels } from "@/content/admin-labels";
 import { phoneKinds } from "@/content/common";
-import { uploadImage } from "./upload";
+import { RichEditor } from "./RichEditor";
+import { uploadDocument, uploadImage } from "./upload";
 
 type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 type Path = (string | number)[];
@@ -68,6 +69,10 @@ export function ContentEditor({
   const [dirty, setDirty] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; errors?: string[]; savedAt?: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  /** Index of the product row whose form is open (products section only). */
+  const [openRow, setOpenRow] = useState<number | null>(null);
+  /** Language shown in the product description editor. */
+  const [detailsLang, setDetailsLang] = useState<"mn" | "en">("mn");
 
   useEffect(() => {
     if (!dirty) return;
@@ -86,13 +91,15 @@ export function ContentEditor({
     change((v) => ({ ...v, [locale]: setAt(v[locale] as Json, path, next) }));
 
   /** List edits apply to every locale so MN and EN rows stay aligned. */
-  const editList = (path: Path, edit: (list: Json[]) => Json[]) =>
+  const editList = (path: Path, edit: (list: Json[]) => Json[]) => {
+    setOpenRow(null);
     change((v) => {
       const out: Values = { ...v };
       for (const l of locales)
         out[l] = setAt(v[l] as Json, path, edit([...((getAt(v[l] as Json, path) as Json[]) ?? [])]));
       return out;
     });
+  };
 
   const saveValues = (payload: Values) =>
     startTransition(async () => {
@@ -121,7 +128,12 @@ export function ContentEditor({
       return <LogoField value={current} onChange={(url) => locales.forEach((l) => setLeaf(l, path, url))} />;
     }
 
-    if (key === "href") {
+    if (key === "brochure") {
+      const current = String(getAt(values[locales[0]] as Json, path) ?? "");
+      return <BrochureField value={current} onChange={(url) => locales.forEach((l) => setLeaf(l, path, url))} />;
+    }
+
+    if (key === "href" || key === "appStore" || key === "playStore") {
       const first = String(getAt(values[locales[0]] as Json, path) ?? "");
       return (
         <input
@@ -134,22 +146,6 @@ export function ContentEditor({
           onChange={(e) => locales.forEach((l) => setLeaf(l, path, e.target.value))}
           className={`${inputClass} md:max-w-xl`}
         />
-      );
-    }
-
-    if (key === "group") {
-      const current = String(getAt(values[locales[0]] as Json, path) ?? "");
-      return (
-        <select
-          value={current}
-          onChange={(e) => locales.forEach((l) => setLeaf(l, path, e.target.value))}
-          className={`${inputClass} md:max-w-xs`}
-        >
-          <option value="">Автомат (дарааллаар)</option>
-          <option value="main">Үндсэн (том карт)</option>
-          <option value="featured">Онцлох</option>
-          <option value="other">Бусад (жижиг карт)</option>
-        </select>
       );
     }
 
@@ -172,7 +168,7 @@ export function ContentEditor({
     }
 
     return (
-      <div className={`grid gap-3 ${locales.length > 1 ? "md:grid-cols-2" : ""}`}>
+      <div className={`grid gap-3 ${locales.length > 1 && key !== "details" ? "md:grid-cols-2" : ""}`}>
         {locales.map((l) => {
           const v = getAt(values[l] as Json, path);
           if (typeof v === "number") {
@@ -186,16 +182,58 @@ export function ContentEditor({
               />
             );
           }
+          if (key === "details") {
+            // One editor at a time; MN / EN are switched with tabs.
+            if (locales.length > 1 && l !== detailsLang) return null;
+            return (
+              <div key={l}>
+                {locales.length > 1 && (
+                  <div role="tablist" aria-label="Хэл" className="mb-2 inline-flex rounded-full bg-soft p-1">
+                    {locales.map((x) => {
+                      const filled = String(getAt(values[x] as Json, path) ?? "").trim() !== "";
+                      return (
+                        <button
+                          key={x}
+                          type="button"
+                          role="tab"
+                          aria-selected={x === detailsLang}
+                          onClick={() => setDetailsLang(x === "en" ? "en" : "mn")}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                            x === detailsLang ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink"
+                          }`}
+                        >
+                          {LOCALE_TITLES[x] || x.toUpperCase()}
+                          <span
+                            aria-hidden
+                            title={filled ? "Бөглөсөн" : "Хоосон"}
+                            className={`size-1.5 rounded-full ${filled ? "bg-ok" : "bg-line-strong"}`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <RichEditor
+                  key={l}
+                  lang={l === "en" ? "en" : "mn"}
+                  images
+                  value={String(v ?? "")}
+                  onChange={(html) => setLeaf(l, path, html)}
+                  placeholder="Бүтээгдэхүүний дэлгэрэнгүй тайлбар…"
+                />
+              </div>
+            );
+          }
           const str = String(v ?? "");
           const longest = Math.max(...locales.map((x) => String(getAt(values[x] as Json, path) ?? "").length));
-          const long = longest > 70;
+          const long = longest > 70 || key === "details";
           // Grow with the text (≈75 characters per line) so long answers don't need scrolling.
-          const rows = Math.min(12, Math.max(3, Math.ceil(longest / 75) + 1));
+          const rows = Math.min(key === "details" ? 20 : 12, Math.max(key === "details" ? 6 : 3, Math.ceil(longest / 75) + 1));
           const common = {
             value: str,
             lang: l === "all" ? undefined : l,
             "aria-label": `${labelFor(key ?? "")} ${LOCALE_TITLES[l]}`.trim(),
-            "aria-invalid": str.trim() === "",
+            "aria-invalid": key !== "details" && str.trim() === "",
             className: inputClass,
           };
           return long ? (
@@ -243,15 +281,132 @@ export function ContentEditor({
     );
   }
 
+  /** «Удахгүй» and «Нуусан» switches of a list row. */
+  function flagButtons(rowPath: Path, item: Json) {
+    return (
+      <>
+      {hasFlag(item, "comingSoon") && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => toggleFlag(rowPath, "comingSoon")}
+          aria-pressed={isFlagOn(item, "comingSoon")}
+          title={
+            isFlagOn(item, "comingSoon")
+              ? "«Удахгүй» тэмдгийг авах"
+              : "«Удахгүй худалдаанд гарна» гэж тэмдэглэх"
+          }
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
+            isFlagOn(item, "comingSoon")
+              ? "border-amber-300 bg-amber-100 text-amber-800"
+              : "border-line bg-surface text-muted"
+          }`}
+        >
+          <Hourglass className="size-3.5" />
+          {isFlagOn(item, "comingSoon") ? "Удахгүй" : "Худалдаанд гарсан"}
+        </button>
+      )}
+      {hasHidden(item) && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => toggleFlag(rowPath, "hidden")}
+          aria-pressed={isHidden(item)}
+          title={isHidden(item) ? "Сайт дээр харуулах" : "Сайтаас нуух"}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
+            isHidden(item)
+              ? "border-line-strong bg-surface text-muted"
+              : "border-brand-line bg-brand-soft text-brand"
+          }`}
+        >
+          {isHidden(item) ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+          {isHidden(item) ? "Нуусан" : "Харагдаж байна"}
+        </button>
+      )}
+      </>
+    );
+  }
+
+  /** Collapsed product row: logo, name, status chips; "Засах" opens the full form below it. */
+  function productRow(path: Path, item: Record<string, Json>, i: number, length: number) {
+    const open = openRow === i;
+    const str = (k: string) => (typeof item[k] === "string" ? (item[k] as string) : "");
+    const chips = [
+      isFlagOn(item, "comingSoon") && "Удахгүй",
+      isHidden(item) && "Нуусан",
+      str("details").trim() !== "" && "Тайлбартай",
+      str("brochure") && "Файл",
+      str("appStore") && "iOS",
+      str("playStore") && "Android",
+      str("href") && "Вэбсайт",
+    ].filter(Boolean) as string[];
+    return (
+      <div
+        key={i}
+        className={`rounded-xl border bg-surface ${open ? "border-brand/40 shadow-card" : "border-line"} ${
+          isHidden(item) && !open ? "opacity-70" : ""
+        }`}
+      >
+        <div className="flex flex-wrap items-center gap-3 p-3">
+          <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-white p-1">
+            {str("logo") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={str("logo")} alt="" className="size-full object-contain" />
+            ) : (
+              <ImagePlus className="size-5 text-line-strong" aria-hidden />
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => setOpenRow(open ? null : i)}
+            aria-expanded={open}
+            className="min-w-0 flex-1 text-left"
+          >
+            <span className="block truncate font-semibold">{str("name") || `#${i + 1}`}</span>
+            <span className="block truncate text-sm text-muted">{str("purpose")}</span>
+            {chips.length > 0 && (
+              <span className="mt-1 flex flex-wrap gap-1">
+                {chips.map((c) => (
+                  <span key={c} className="rounded-full bg-soft px-2 py-0.5 text-[11px] font-medium text-muted">
+                    {c}
+                  </span>
+                ))}
+              </span>
+            )}
+          </button>
+          <div className="flex items-center gap-2">
+            {flagButtons([...path, i], item)}
+            <button
+              type="button"
+              onClick={() => setOpenRow(open ? null : i)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ${
+                open ? "bg-soft text-ink" : "bg-ink text-bg hover:opacity-85"
+              }`}
+            >
+              {open ? <ChevronUp className="size-3.5" /> : <Pencil className="size-3.5" />}
+              {open ? "Хаах" : "Засах"}
+            </button>
+            {rowControls(path, i, length)}
+          </div>
+        </div>
+        {open && <div className="border-t border-line bg-soft/60 p-4">{renderNode([...path, i])}</div>}
+      </div>
+    );
+  }
+
   function renderNode(path: Path, key?: string | number): React.ReactNode {
     const sample = getAt(values[locales[0]] as Json, path);
 
     if (Array.isArray(sample)) {
+      // The product list shows one compact row per product and opens a form on demand.
+      const compact = sectionKey === "products" && path.length === 1 && path[0] === "items";
       return (
         <fieldset className="space-y-2">
           {key !== undefined && <legend className="mb-2 text-sm font-semibold">{labelFor(key)}</legend>}
           {sample.map((item, i) =>
-            typeof item === "object" && item !== null ? (
+            compact && typeof item === "object" && item !== null && !Array.isArray(item) ? (
+              productRow(path, item, i, sample.length)
+            ) : typeof item === "object" && item !== null ? (
               <div
                 key={i}
                 className={`rounded-xl border border-line bg-soft/60 p-3 ${isHidden(item) ? "opacity-70" : ""}`}
@@ -259,44 +414,7 @@ export function ContentEditor({
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted">#{i + 1}</span>
                   <div className="flex items-center gap-2">
-                    {hasFlag(item, "comingSoon") && (
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => toggleFlag([...path, i], "comingSoon")}
-                        aria-pressed={isFlagOn(item, "comingSoon")}
-                        title={
-                          isFlagOn(item, "comingSoon")
-                            ? "«Удахгүй» тэмдгийг авах"
-                            : "«Удахгүй худалдаанд гарна» гэж тэмдэглэх"
-                        }
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
-                          isFlagOn(item, "comingSoon")
-                            ? "border-amber-300 bg-amber-100 text-amber-800"
-                            : "border-line bg-surface text-muted"
-                        }`}
-                      >
-                        <Hourglass className="size-3.5" />
-                        {isFlagOn(item, "comingSoon") ? "Удахгүй" : "Худалдаанд гарсан"}
-                      </button>
-                    )}
-                    {hasHidden(item) && (
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => toggleFlag([...path, i], "hidden")}
-                        aria-pressed={isHidden(item)}
-                        title={isHidden(item) ? "Сайт дээр харуулах" : "Сайтаас нуух"}
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
-                          isHidden(item)
-                            ? "border-line-strong bg-surface text-muted"
-                            : "border-brand-line bg-brand-soft text-brand"
-                        }`}
-                      >
-                        {isHidden(item) ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                        {isHidden(item) ? "Нуусан" : "Харагдаж байна"}
-                      </button>
-                    )}
+                    {flagButtons([...path, i], item)}
                     {rowControls(path, i, sample.length)}
                   </div>
                 </div>
@@ -312,7 +430,10 @@ export function ContentEditor({
           )}
           <button
             type="button"
-            onClick={() => editList(path, (list) => [...list, list.length ? blank(list[list.length - 1]) : ""])}
+            onClick={() => {
+              editList(path, (list) => [...list, list.length ? blank(list[list.length - 1]) : ""]);
+              if (compact) setOpenRow(sample.length);
+            }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-line-strong px-3 py-1.5 text-sm text-muted hover:border-brand hover:text-brand"
           >
             <Plus className="size-3.5" /> Мөр нэмэх
@@ -331,6 +452,15 @@ export function ContentEditor({
           <legend className="px-1 text-sm font-semibold">{labelFor(key)}</legend>
           {children}
         </fieldset>
+      );
+    }
+
+    if (key === "details") {
+      return (
+        <div>
+          <span className="mb-1.5 block text-sm font-medium">{labelFor(key)}</span>
+          {renderLeaf(path, key)}
+        </div>
       );
     }
 
@@ -369,7 +499,7 @@ export function ContentEditor({
         )}
         {!result && dirty && <span className="text-sm text-muted">Хадгалаагүй өөрчлөлт байна</span>}
         {!result && !dirty && updatedAt && (
-          <span className="text-sm text-muted">
+          <span className="text-sm text-muted" suppressHydrationWarning>
             Сүүлд: {new Date(updatedAt).toLocaleString("mn-MN")} {updatedBy ? `· ${updatedBy}` : ""}
           </span>
         )}
@@ -474,6 +604,78 @@ function LogoField({ value, onChange }: { value: string; onChange: (url: string)
         onChange={(e) => void pick(e.target.files?.[0])}
       />
       {error && <p className="mt-1 text-center text-xs text-brand">{error}</p>}
+    </div>
+  );
+}
+
+/** One shared brochure file per product: PDF, PowerPoint, Word or Excel, uploaded as-is. */
+function BrochureField({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [name, setName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await uploadDocument(file);
+      setName(res.name);
+      onChange(res.url);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {value ? (
+          <a
+            href={value}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 font-medium hover:border-brand hover:text-brand"
+          >
+            <FileText className="size-4" aria-hidden /> {name ?? "Оруулсан файл"}
+          </a>
+        ) : (
+          <span className="text-muted">Файл оруулаагүй</span>
+        )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => input.current?.click()}
+          className="font-semibold text-brand hover:underline disabled:opacity-50"
+        >
+          {busy ? "Оруулж байна…" : value ? "Солих" : "Сонгох"}
+        </button>
+        {value && !busy && (
+          <button
+            type="button"
+            onClick={() => {
+              setName(null);
+              onChange("");
+            }}
+            className="font-semibold text-muted hover:text-ink"
+          >
+            Авах
+          </button>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-muted">Заавал биш. PDF, PPT, PPTX, DOC, DOCX, XLS, XLSX — 15MB хүртэл.</p>
+      <input
+        ref={input}
+        type="file"
+        accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx"
+        className="sr-only"
+        onChange={(e) => void pick(e.target.files?.[0])}
+      />
+      {error && <p className="mt-1 text-xs text-brand">{error}</p>}
     </div>
   );
 }

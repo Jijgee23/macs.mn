@@ -14,6 +14,7 @@ export async function SiteHeader() {
     { href: "/#products", label: t.nav.products },
     { href: "/#modules", label: t.nav.modules },
     { href: "/medee", label: t.nav.news },
+    { href: "/gereenii-huselt", label: t.nav.contract },
     { href: "/holboo-barih", label: t.nav.contact },
   ].map((item) => ({ ...item, href: localeHref(locale, item.href) }));
   const quoteHref = localeHref(locale, "/une-sanal");

@@ -31,3 +31,16 @@ export async function uploadImage(file: File, maxSide = MAX_SIDE): Promise<{ url
   }
   return { url: data.url, id: data.id };
 }
+
+/** Uploads a brochure document (PDF, PowerPoint, Word, Excel) as-is. */
+export async function uploadDocument(file: File): Promise<{ url: string; name: string }> {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("kind", "document");
+  const res = await fetch("/admin/upload", { method: "POST", body });
+  const data = (await res.json().catch(() => ({}))) as { url?: string; name?: string; error?: string };
+  if (!res.ok || !data.url) {
+    throw new Error(data.error ?? (res.status === 413 ? "Файл хэт том байна" : "Upload амжилтгүй"));
+  }
+  return { url: data.url, name: data.name ?? file.name };
+}

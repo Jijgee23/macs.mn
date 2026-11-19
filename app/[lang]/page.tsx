@@ -139,10 +139,7 @@ export default async function Home() {
       {visibleProducts.length > 0 && (
         <section id="products" className="container-wide py-20 sm:py-28">
           <SectionHeading eyebrow={t.products.eyebrow} title={t.products.title} intro={t.products.intro} />
-          <ProductShowcase items={visibleProducts} labels={t.products} />
-          <p className="mt-6 text-sm text-muted">
-            {t.products.alsoLabel}: {t.products.others.join(" · ")}
-          </p>
+          <ProductShowcase items={visibleProducts} all={t.products.items} labels={t.products} locale={locale} />
         </section>
       )}
 

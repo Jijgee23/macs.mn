@@ -66,7 +66,6 @@ export const quoteProductIds = [
   "restaurant-pos",
   "pharmacy-pos",
   "hr-payroll",
-  "other",
 ] as const;
 
 export type QuoteProductId = (typeof quoteProductIds)[number];
@@ -121,6 +120,8 @@ export const formErrorCodes = [
   "tooManyFiles",
   "filesTooLarge",
   "fileType",
+  "invalidRegNo",
+  "invalidNumber",
 ] as const;
 
 export type FormErrorCode = (typeof formErrorCodes)[number];

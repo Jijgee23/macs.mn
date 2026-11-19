@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
+import { defaultAppearance } from "@/lib/post-appearance";
 import { PostForm } from "@/components/admin/PostForm";
 import { Loading } from "@/components/admin/Requests";
 
@@ -39,6 +40,7 @@ async function NewPost() {
         bodyEn: "",
         coverId: null,
         galleryIds: [],
+        appearance: defaultAppearance,
       }}
     />
   );

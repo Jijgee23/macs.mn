@@ -16,7 +16,7 @@ type Props = {
   success: SiteContent["quote"]["success"];
   errors: Record<FormErrorCode, string>;
   recaptchaSiteKey: string | null;
-  /** Names of the products listed on the site (managed in the admin); "other" is added by the form. */
+  /** Names of the products listed on the site (managed in the admin). */
   productNames: string[];
 };
 
@@ -94,19 +94,19 @@ export function QuoteForm({ locale, t, success, errors, recaptchaSiteKey, produc
       <fieldset className="mt-6">
         <legend className="text-sm font-medium">{t.productsLegend}</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {[...productNames.map((n) => ({ id: n, label: n })), { id: "other", label: t.products.other }].map(({ id, label }) => (
+          {productNames.map((name) => (
             <label
-              key={id}
+              key={name}
               className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-line px-3.5 py-2.5 text-sm transition-colors hover:border-line-strong has-checked:border-brand has-checked:bg-brand-soft"
             >
               <input
                 type="checkbox"
                 name="products"
-                value={id}
-                defaultChecked={v?.products.includes(id)}
+                value={name}
+                defaultChecked={v?.products.includes(name)}
                 className="size-4 accent-[#b91c1c]"
               />
-              {label}
+              {name}
             </label>
           ))}
         </div>
