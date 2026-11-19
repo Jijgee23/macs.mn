@@ -3,11 +3,11 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { loadAllContent } from "@/lib/content";
 import { notifyNewContact, notifyNewQuote, notifySupportReceived } from "@/lib/mail";
 import { verifyRecaptcha } from "@/lib/recaptcha";
 import {
   contactTopics,
-  quoteProductIds,
   SUPPORT_MAX_BYTES,
   SUPPORT_MAX_EMAILS,
   SUPPORT_MAX_FILES,
@@ -64,7 +64,7 @@ const quoteSchema = z.object({
   name: optionalText(120),
   company: optionalText(200),
   message: optionalText(2000),
-  products: z.array(z.enum(quoteProductIds)).max(quoteProductIds.length).catch([]),
+  products: z.array(z.string().trim().max(120)).max(30).catch([]),
 });
 
 const contactSchema = z.object({
@@ -128,6 +128,11 @@ export async function createQuote(input: unknown, locale: Locale, captchaToken: 
   if (!parsed.success) return invalid(parsed.error);
 
   try {
+    // Only products the site actually lists (plus "other") are accepted.
+    const { content } = await loadAllContent();
+    const allowed = new Set([...content[locale].products.items.filter((p) => !p.hidden).map((p) => p.name), "other"]);
+    parsed.data.products = [...new Set(parsed.data.products)].filter((p) => allowed.has(p));
+
     if (ip && (await db.quoteRequest.count({ where: { ip, createdAt: { gte: since() } } })) >= RATE_LIMIT_MAX) {
       return { ok: false, error: "rateLimited" };
     }

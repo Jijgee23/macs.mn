@@ -64,7 +64,8 @@ export default async function QuotePage() {
             </p>
           </div>
         </div>
-        <QuoteForm locale={locale} t={t.quote.form} success={t.quote.success} errors={t.formErrors} recaptchaSiteKey={recaptchaSiteKey()} />
+        <QuoteForm locale={locale} t={t.quote.form} success={t.quote.success} errors={t.formErrors} recaptchaSiteKey={recaptchaSiteKey()}
+          productNames={t.products.items.filter((p) => !p.hidden).map((p) => p.name)} />
       </div>
     </div>
   );

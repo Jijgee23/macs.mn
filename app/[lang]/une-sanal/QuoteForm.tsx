@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { submitQuote, type QuoteFormState } from "./actions";
-import { quoteProductIds, type FormErrorCode } from "@/content/common";
+import type { FormErrorCode } from "@/content/common";
 import { FieldError, FormSuccess, Honeypot, inputClass } from "@/components/FormParts";
 import { Recaptcha } from "@/components/Recaptcha";
 import type { SiteContent } from "@/content/schema";
@@ -16,9 +16,11 @@ type Props = {
   success: SiteContent["quote"]["success"];
   errors: Record<FormErrorCode, string>;
   recaptchaSiteKey: string | null;
+  /** Names of the products listed on the site (managed in the admin); "other" is added by the form. */
+  productNames: string[];
 };
 
-export function QuoteForm({ locale, t, success, errors, recaptchaSiteKey }: Props) {
+export function QuoteForm({ locale, t, success, errors, recaptchaSiteKey, productNames }: Props) {
   const [state, formAction, pending] = useActionState(submitQuote, initialState);
 
   if (state.ok) {
@@ -92,7 +94,7 @@ export function QuoteForm({ locale, t, success, errors, recaptchaSiteKey }: Prop
       <fieldset className="mt-6">
         <legend className="text-sm font-medium">{t.productsLegend}</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {quoteProductIds.map((id) => (
+          {[...productNames.map((n) => ({ id: n, label: n })), { id: "other", label: t.products.other }].map(({ id, label }) => (
             <label
               key={id}
               className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-line px-3.5 py-2.5 text-sm transition-colors hover:border-line-strong has-checked:border-brand has-checked:bg-brand-soft"
@@ -104,7 +106,7 @@ export function QuoteForm({ locale, t, success, errors, recaptchaSiteKey }: Prop
                 defaultChecked={v?.products.includes(id)}
                 className="size-4 accent-[#b91c1c]"
               />
-              {t.products[id]}
+              {label}
             </label>
           ))}
         </div>
