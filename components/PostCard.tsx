@@ -20,8 +20,12 @@ export function PostCard({
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-card transition-all hover:-translate-y-0.5 hover:border-line-strong hover:shadow-pop">
       <Link href={href} className="block aspect-[1200/630] overflow-hidden bg-soft" tabIndex={-1} aria-hidden>
         {post.cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.cover} alt="" loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+          <span className="relative block size-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.cover} alt="" aria-hidden loading="lazy" className="absolute inset-0 size-full scale-110 object-cover opacity-60 blur-2xl" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={post.cover} alt="" loading="lazy" className="relative size-full object-contain transition-transform duration-500 group-hover:scale-[1.03]" />
+          </span>
         ) : (
           <span className="flex size-full items-center justify-center text-line-strong">
             <Newspaper className="size-10" />

@@ -38,6 +38,7 @@ async function NewPost() {
         excerptEn: "",
         bodyEn: "",
         coverId: null,
+        galleryIds: [],
       }}
     />
   );

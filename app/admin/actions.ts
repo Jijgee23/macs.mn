@@ -7,7 +7,7 @@ import { refresh, revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession, hashPassword, requireAdmin, safeNext, startSession, verifyPassword } from "@/lib/auth";
-import { CONTENT_TAG } from "@/lib/content";
+import { CONTENT_TAG, fallbackContent, overlay } from "@/lib/content";
 import { notifySupportStatus, PRIMARY_NOTIFY_EMAIL } from "@/lib/mail";
 import { contactInfoSchema, sectionSchemas, type SectionKey } from "@/content/schema";
 import { fieldLabels } from "@/content/admin-labels";
@@ -133,7 +133,8 @@ export async function saveSection(key: string, payload: string): Promise<SaveRes
   } else if (key in sectionSchemas) {
     const schema = sectionSchemas[key as SectionKey];
     for (const locale of ["mn", "en"]) {
-      const parsed = schema.safeParse(data[locale]);
+      // An editor opened before a new text field existed doesn't send it: fill it from the built-in text.
+      const parsed = schema.safeParse(overlay(fallbackContent[locale as "mn" | "en"][key as SectionKey], data[locale]));
       if (parsed.success) rows.push({ locale, data: parsed.data });
       else errors.push(...issuePaths(locale, parsed.error));
     }

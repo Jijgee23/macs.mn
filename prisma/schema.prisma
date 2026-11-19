@@ -165,6 +165,8 @@ model Post {
   excerptEn   String?
   bodyEn      String?
   coverId     String?
+  /** Extra pictures (Media ids) shown as a gallery under the article, in order */
+  galleryIds  String[] @default([])
   publishedAt DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt

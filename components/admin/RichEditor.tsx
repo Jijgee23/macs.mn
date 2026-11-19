@@ -1,6 +1,5 @@
 "use client";
 
-import { useId, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -8,13 +7,11 @@ import {
   Bold,
   Heading2,
   Heading3,
-  ImagePlus,
   Italic,
   Link2,
   Link2Off,
   List,
   ListOrdered,
-  Loader2,
   Minus,
   Quote,
   Redo2,
@@ -23,11 +20,11 @@ import {
   Undo2,
   type LucideIcon,
 } from "lucide-react";
-import { uploadImage } from "./upload";
 
 /**
  * Rich text editor for post bodies. Produces HTML limited to what lib/sanitize.ts keeps:
- * headings, emphasis, lists, quotes, links and uploaded images.
+ * headings, emphasis, lists, quotes and links. Images are managed in the post's Media section; the Image
+ * extension stays only so older posts that already embed pictures keep them when edited.
  */
 export function RichEditor({
   value,
@@ -72,9 +69,6 @@ export function RichEditor({
 }
 
 function Toolbar({ editor }: { editor: Editor }) {
-  const fileInputId = useId();
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const setLink = () => {
     const previous = editor.getAttributes("link").href as string | undefined;
@@ -91,22 +85,6 @@ function Toolbar({ editor }: { editor: Editor }) {
       return;
     }
     editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
-  };
-
-  const onImage = async (input: HTMLInputElement) => {
-    const file = input.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const { url } = await uploadImage(file);
-      editor.chain().focus().setImage({ src: url, alt: file.name.replace(/\.\w+$/, "") }).run();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setUploading(false);
-      input.value = "";
-    }
   };
 
   const buttons: { icon: LucideIcon; label: string; run: () => void; active?: boolean; disabled?: boolean }[][] = [
@@ -129,7 +107,6 @@ function Toolbar({ editor }: { editor: Editor }) {
     [
       { icon: Link2, label: "Холбоос", run: setLink, active: editor.isActive("link") },
       { icon: Link2Off, label: "Холбоос авах", run: () => editor.chain().focus().unsetLink().run(), disabled: !editor.isActive("link") },
-      { icon: uploading ? Loader2 : ImagePlus, label: "Зураг оруулах", run: () => document.getElementById(fileInputId)?.click(), disabled: uploading },
     ],
     [
       { icon: Undo2, label: "Буцаах", run: () => editor.chain().focus().undo().run(), disabled: !editor.can().undo() },
@@ -156,20 +133,12 @@ function Toolbar({ editor }: { editor: Editor }) {
                   b.active ? "bg-ink text-bg" : "text-muted hover:bg-surface hover:text-ink"
                 }`}
               >
-                <b.icon className={`size-4 ${b.icon === Loader2 ? "animate-spin" : ""}`} />
+                <b.icon className="size-4" />
               </button>
             ))}
           </div>
         ))}
-        <input
-          id={fileInputId}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          className="hidden"
-          onChange={(e) => onImage(e.currentTarget)}
-        />
       </div>
-      {error && <p className="px-3 pb-2 text-xs text-brand">{error}</p>}
     </div>
   );
 }

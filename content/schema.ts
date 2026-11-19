@@ -18,6 +18,36 @@ import {
 
 const text = z.string().trim().min(1, "Хоосон байж болохгүй");
 const item = z.object({ title: text, body: text });
+/**
+ * Optional link. Always stored as https://: "macs.mn/x" gets the scheme added and
+ * "http://…" is upgraded; anything else (mailto:, javascript:, a bare word) is refused.
+ */
+const toHttps = (v: string) => {
+  if (v === "") return v;
+  if (/^https:\/\//i.test(v)) return `https://${v.slice(8)}`;
+  if (/^http:\/\//i.test(v)) return `https://${v.slice(7)}`;
+  return /^[\w-]+(\.[\w-]+)+([/?#:]|$)/.test(v) ? `https://${v}` : v;
+};
+const optionalLink = z
+  .string()
+  .trim()
+  .transform(toHttps)
+  .pipe(
+    z
+      .string()
+      .max(300, "Холбоос хэт урт")
+      .refine(
+        (v) => v === "" || /^https:\/\/[^\s/]+\S*$/.test(v),
+        "Холбоос вэб хаяг байх ёстой (жишээ: macs.mn эсвэл https://macs.mn)",
+      ),
+  )
+  .default("");
+/** Optional picture uploaded through the admin (stored as /media/<id>). */
+const optionalLogo = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^\/media\/[a-z0-9]{20,32}$/.test(v), "Лого зөвхөн админаар оруулсан зураг байна")
+  .default("");
 const fixedKeys = <K extends readonly [string, ...string[]], V extends z.ZodType>(keys: K, value: V) =>
   z.record(z.enum(keys), value);
 
@@ -72,7 +102,25 @@ export const sectionSchemas = {
     eyebrow: text,
     title: text,
     intro: text,
-    items: z.array(z.object({ name: text, purpose: text, highlight: text })).min(1),
+    items: z
+      .array(
+        z.object({
+          name: text,
+          purpose: text,
+          highlight: text,
+          href: optionalLink,
+          hidden: z.boolean().default(false),
+          comingSoon: z.boolean().default(false),
+          /** Where it sits on the home page; "" = by order (1st main, next two featured, rest other). */
+          group: z.enum(["", "main", "featured", "other"]).default(""),
+          logo: optionalLogo,
+        }),
+      )
+      .min(1),
+    moreLabel: text,
+    comingSoonLabel: text,
+    aboutLabel: text,
+    otherTitle: text,
     alsoLabel: text,
     others: z.array(text),
   }),
@@ -81,6 +129,7 @@ export const sectionSchemas = {
     title: text,
     intro: text,
     docsLink: text,
+    featuresLabel: text,
     items: fixedKeys(moduleKeys, z.object({ title: text, summary: text, features: z.array(text).min(1) })),
   }),
   integrations: z.object({
@@ -120,6 +169,8 @@ export const sectionSchemas = {
     copyLink: text,
     copied: text,
     back: text,
+    readTime: text,
+    relatedTitle: text,
     onlyInMongolian: text,
   }),
   footer: z.object({
@@ -219,9 +270,7 @@ export const contactInfoSchema = z.object({
   email: z.string().trim().pipe(z.email("Имэйл буруу байна")),
   web: z.string().trim().pipe(z.url("Хаяг буруу байна")),
   founded: z.coerce.number().int().min(1900).max(2100),
-  phones: z
-    .array(z.object({ number: text, kind: z.enum(phoneKinds) }))
-    .min(1),
+  phones: z.array(z.object({ number: text, kind: z.enum(phoneKinds) })).min(1),
 });
 
 export type ContactInfo = z.infer<typeof contactInfoSchema>;

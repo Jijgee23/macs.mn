@@ -6,10 +6,10 @@
 
 const MAX_SIDE = 1600;
 
-async function shrink(file: File): Promise<Blob> {
+async function shrink(file: File, maxSide: number): Promise<Blob> {
   if (file.type === "image/gif") return file;
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
@@ -19,9 +19,9 @@ async function shrink(file: File): Promise<Blob> {
   return blob && blob.size < file.size ? blob : file;
 }
 
-export async function uploadImage(file: File): Promise<{ url: string; id: string }> {
+export async function uploadImage(file: File, maxSide = MAX_SIDE): Promise<{ url: string; id: string }> {
   if (!file.type.startsWith("image/")) throw new Error("Зөвхөн зураг оруулна уу");
-  const blob = await shrink(file);
+  const blob = await shrink(file, maxSide);
   const body = new FormData();
   body.append("file", blob, file.name.replace(/\.\w+$/, "") + (blob.type === "image/webp" ? ".webp" : ""));
   const res = await fetch("/admin/upload", { method: "POST", body });

@@ -14,6 +14,10 @@ export type PublicPost = {
   excerpt: string;
   body: string;
   cover: string | null;
+  gallery: string[];
+  /** Pixel size of the cover and gallery images by url, so the page can reserve their space. */
+  dims: Record<string, { width: number; height: number }>;
+  readMinutes: number;
   publishedAt: string;
   hasEn: boolean;
 };
@@ -52,7 +56,12 @@ export async function getPost(slug: string, locale: Locale): Promise<PublicPost 
     const p = await db.post.findUnique({ where: { slug } });
     if (!p || p.status !== "PUBLISHED") return null;
     if (locale === "en" && !p.titleEn) return null;
-    return toPublic(p, locale);
+    const ids = [...(p.coverId ? [p.coverId] : []), ...p.galleryIds];
+    const sizes = ids.length
+      ? await db.media.findMany({ where: { id: { in: ids } }, select: { id: true, width: true, height: true } })
+      : [];
+    const dims = Object.fromEntries(sizes.map((m) => [`/media/${m.id}`, { width: m.width, height: m.height }]));
+    return toPublic(p, locale, dims);
   } catch (err) {
     console.error("[posts] database unavailable", err);
     return null;
@@ -73,15 +82,26 @@ export async function hasMnPost(slug: string) {
 
 type Row = Awaited<ReturnType<typeof db.post.findMany>>[number];
 
-function toPublic(p: Row, locale: Locale): PublicPost {
+/** Words ÷ 200 per minute, at least one. */
+function readMinutes(html: string) {
+  const words = html.replace(/<[^>]*>/g, " ").match(/\S+/g)?.length ?? 0;
+  return Math.max(1, Math.round(words / 200));
+}
+
+function toPublic(p: Row, locale: Locale, dims: PublicPost["dims"] = {}): PublicPost {
   const en = locale === "en" && p.titleEn;
+  const body = en ? (p.bodyEn ?? "") : p.bodyMn;
   return {
     slug: p.slug,
     category: p.category,
     title: en ? p.titleEn! : p.titleMn,
     excerpt: en ? (p.excerptEn ?? "") : p.excerptMn,
-    body: en ? (p.bodyEn ?? "") : p.bodyMn,
+    // Pictures inside the text load lazily and decode off the main thread.
+    body: body.replace(/<img /g, '<img loading="lazy" decoding="async" '),
     cover: mediaUrl(p.coverId),
+    gallery: p.galleryIds.map((id) => `/media/${id}`),
+    dims,
+    readMinutes: readMinutes(body),
     publishedAt: (p.publishedAt ?? p.createdAt).toISOString(),
     hasEn: !!p.titleEn,
   };

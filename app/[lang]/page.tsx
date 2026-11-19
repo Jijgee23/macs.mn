@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
-  ArrowUpRight,
   BookOpen,
   Building2,
   ChartColumn,
@@ -22,9 +21,10 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { DOCS_URL, moduleDocsIds, moduleKeys, telHref, type ModuleKey } from "@/content/common";
+import { moduleKeys, telHref, type ModuleKey } from "@/content/common";
 import { HeroMockup } from "@/components/HeroMockup";
 import { PostCard } from "@/components/PostCard";
+import { ProductShowcase } from "@/components/ProductShowcase";
 import { listPosts } from "@/lib/posts";
 import { getContent, getContentFor } from "@/lib/content";
 import { isLocale, localeHref } from "@/lib/locale";
@@ -49,7 +49,10 @@ export async function generateMetadata({ params }: PageProps<"/[lang]">): Promis
   const t = await getContentFor(lang);
   return {
     title: { absolute: t.meta.title },
-    alternates: { canonical: localeHref(isLocale(lang) ? lang : "mn", "/"), languages: { mn: "/", en: "/en" } },
+    alternates: {
+      canonical: localeHref(isLocale(lang) ? lang : "mn", "/"),
+      languages: { mn: "/", en: "/en" },
+    },
   };
 }
 
@@ -77,12 +80,16 @@ export default async function Home() {
   const { locale, t, contact } = await getContent();
   const latest = await listPosts(locale, undefined, 3);
   const quoteHref = localeHref(locale, "/une-sanal");
+  const visibleProducts = t.products.items.filter((p) => !p.hidden);
 
   return (
     <>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div aria-hidden className="bg-dots absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+        <div
+          aria-hidden
+          className="bg-dots absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
+        />
         <div aria-hidden className="bg-glow absolute inset-0" />
         <div className="container-wide relative grid items-center gap-12 pt-16 pb-20 sm:pt-24 lg:grid-cols-[1.05fr_1fr]">
           <div>
@@ -129,47 +136,41 @@ export default async function Home() {
       </section>
 
       {/* Products */}
-      <section id="products" className="container-wide py-20 sm:py-28">
-        <SectionHeading eyebrow={t.products.eyebrow} title={t.products.title} intro={t.products.intro} />
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {t.products.items.map((p) => (
-            <article
-              key={p.name}
-              className="group rounded-2xl border border-line bg-surface p-6 shadow-card transition-all hover:-translate-y-0.5 hover:border-line-strong hover:shadow-pop"
-            >
-              <h3 className="text-lg font-bold">{p.name}</h3>
-              <p className="mt-2 text-sm text-muted">{p.purpose}</p>
-              <p className="mt-5 flex items-center gap-2 text-sm font-medium">
-                <Check className="size-4 shrink-0 text-brand" aria-hidden />
-                {p.highlight}
-              </p>
-            </article>
-          ))}
-        </div>
-        <p className="mt-6 text-sm text-muted">
-          {t.products.alsoLabel}: {t.products.others.join(" · ")}
-        </p>
-      </section>
+      {visibleProducts.length > 0 && (
+        <section id="products" className="container-wide py-20 sm:py-28">
+          <SectionHeading eyebrow={t.products.eyebrow} title={t.products.title} intro={t.products.intro} />
+          <ProductShowcase items={visibleProducts} labels={t.products} />
+          <p className="mt-6 text-sm text-muted">
+            {t.products.alsoLabel}: {t.products.others.join(" · ")}
+          </p>
+        </section>
+      )}
 
       {/* Modules */}
       <section id="modules" className="border-y border-line bg-soft">
         <div className="container-wide py-20 sm:py-28">
           <SectionHeading eyebrow={t.modules.eyebrow} title={t.modules.title} intro={t.modules.intro} />
-          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-12 grid items-start gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {moduleKeys.map((key) => {
               const m = t.modules.items[key];
               const Icon = MODULE_ICONS[key];
               return (
-                <article
+                <details
                   key={key}
-                  className="group flex flex-col rounded-2xl border border-line bg-surface p-6 shadow-card transition-colors hover:border-line-strong"
+                  className="group rounded-2xl border border-line bg-surface shadow-card transition-colors hover:border-line-strong open:border-line-strong"
                 >
-                  <span className="flex size-10 items-center justify-center rounded-xl border border-brand-line bg-brand-soft text-brand">
-                    <Icon className="size-5" aria-hidden />
-                  </span>
-                  <h3 className="mt-5 font-bold">{m.title}</h3>
-                  <p className="mt-2 text-sm text-muted">{m.summary}</p>
-                  <ul className="mt-4 space-y-2 text-sm">
+                  <summary className="flex cursor-pointer list-none flex-col p-6 [&::-webkit-details-marker]:hidden">
+                    <span className="flex size-10 items-center justify-center rounded-xl border border-brand-line bg-brand-soft text-brand">
+                      <Icon className="size-5" aria-hidden />
+                    </span>
+                    <h3 className="mt-5 font-bold">{m.title}</h3>
+                    <p className="mt-2 text-sm text-muted">{m.summary}</p>
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-brand">
+                      {t.modules.featuresLabel}
+                      <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
+                    </span>
+                  </summary>
+                  <ul className="space-y-2 border-t border-line px-6 pt-4 pb-6 text-sm">
                     {m.features.map((f) => (
                       <li key={f} className="flex items-start gap-2">
                         <Check className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
@@ -177,15 +178,7 @@ export default async function Home() {
                       </li>
                     ))}
                   </ul>
-                  <a
-                    href={`${DOCS_URL}/${moduleDocsIds[key]}`}
-                    hrefLang="mn"
-                    className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-medium text-muted transition-colors hover:text-brand"
-                  >
-                    {t.modules.docsLink}
-                    <ArrowUpRight className="size-3.5" aria-hidden />
-                  </a>
-                </article>
+                </details>
               );
             })}
           </div>
@@ -195,11 +188,7 @@ export default async function Home() {
       {/* Integrations */}
       <section className="container-wide py-20 sm:py-28">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr] lg:items-center">
-          <SectionHeading
-            eyebrow={t.integrations.eyebrow}
-            title={t.integrations.title}
-            intro={t.integrations.intro}
-          />
+          <SectionHeading eyebrow={t.integrations.eyebrow} title={t.integrations.title} intro={t.integrations.intro} />
           <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
             {t.integrations.items.map((i) => (
               <div key={i.name} className="bg-surface p-6">
@@ -258,7 +247,10 @@ export default async function Home() {
         <section className="container-wide pb-20 sm:pb-28">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionHeading eyebrow={t.news.eyebrow} title={t.news.latestTitle} />
-            <Link href={localeHref(locale, "/medee")} className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">
+            <Link
+              href={localeHref(locale, "/medee")}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
+            >
               {t.news.latestAll} <ArrowRight className="size-4" />
             </Link>
           </div>
@@ -322,7 +314,10 @@ export default async function Home() {
               <details key={item.question} className="group py-1">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left font-semibold transition-colors hover:text-brand [&::-webkit-details-marker]:hidden">
                   {item.question}
-                  <ChevronDown className="size-5 shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden />
+                  <ChevronDown
+                    className="size-5 shrink-0 text-muted transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
                 </summary>
                 <p className="pb-5 text-muted whitespace-pre-line">{item.answer}</p>
               </details>

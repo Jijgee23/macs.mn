@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ExternalLink, ImagePlus, Loader2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Crop, ExternalLink, ImagePlus, Loader2, X } from "lucide-react";
 import { savePost, type PostInput } from "@/app/admin/posts-actions";
 import { slugify } from "@/lib/slug";
+import { CropDialog } from "./CropDialog";
 import { RichEditor } from "./RichEditor";
 import { uploadImage } from "./upload";
 import { adminInput } from "./styles";
@@ -22,6 +23,10 @@ export function PostForm({ id, initial }: { id: string | null; initial: PostInpu
   const [coverBusy, setCoverBusy] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
   const coverInput = useRef<HTMLInputElement>(null);
+  const [galleryBusy, setGalleryBusy] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
+  const [cropping, setCropping] = useState(false);
 
   useEffect(() => {
     if (!dirty) return;
@@ -65,6 +70,45 @@ export function PostForm({ id, initial }: { id: string | null; initial: PostInpu
       setCoverBusy(false);
       if (coverInput.current) coverInput.current.value = "";
     }
+  };
+
+  const onGallery = async (input: HTMLInputElement) => {
+    const files = Array.from(input.files ?? []);
+    if (!files.length) return;
+    setGalleryBusy(true);
+    setGalleryError(null);
+    const added: string[] = [];
+    const failed: string[] = [];
+    // One at a time keeps the pictures in the order the files were picked.
+    for (const file of files) {
+      try {
+        added.push((await uploadImage(file)).id);
+      } catch (e) {
+        failed.push(`${file.name}: ${(e as Error).message}`);
+      }
+    }
+    if (added.length) {
+      setPost((p) => ({ ...p, galleryIds: [...p.galleryIds, ...added] }));
+      setDirty(true);
+      setResult(null);
+    }
+    if (failed.length) setGalleryError(failed.join(" · "));
+    setGalleryBusy(false);
+    input.value = "";
+  };
+
+  const removeGallery = (gid: string) => set("galleryIds", post.galleryIds.filter((x) => x !== gid));
+
+  const moveGallery = (i: number, dir: -1 | 1) => {
+    const next = [...post.galleryIds];
+    [next[i], next[i + dir]] = [next[i + dir], next[i]];
+    set("galleryIds", next);
+  };
+
+  const onCropped = async (file: File) => {
+    const { id: mediaId } = await uploadImage(file);
+    set("coverId", mediaId);
+    setCropping(false);
   };
 
   const published = post.status === "PUBLISHED";
@@ -154,29 +198,20 @@ export function PostForm({ id, initial }: { id: string | null; initial: PostInpu
         </div>
 
         <div className="space-y-4 rounded-2xl border border-line bg-surface p-5">
-          <Field label="Ангилал">
-            <div className="grid grid-cols-2 gap-2">
-              {(["NEWS", "TIP"] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => set("category", c)}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium ${post.category === c ? "border-brand bg-brand-soft text-brand" : "border-line text-muted hover:text-ink"}`}
-                >
-                  {c === "NEWS" ? "Мэдээ" : "Зөвлөмж"}
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          <Field label="Cover зураг" hint="Жагсаалт, нийтлэлийн дээд хэсэг, Facebook share-д харагдана. 1200×630 орчим хэвтээ зураг тохиромжтой.">
+          <span className="block text-sm font-semibold">Медиа</span>
+          <Field label="Cover зураг" hint="Жагсаалт, нийтлэлийн дээд хэсэг, Facebook share-д харагдана. Зураг анхны хэмжээгээрээ бүтнээрээ харагдана. Шаардлагатай бол «Хайчлах» товчоор хайчилж болно (заавал биш).">
             {post.coverId ? (
               <div className="relative overflow-hidden rounded-lg border border-line">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/media/${post.coverId}`} alt="" className="aspect-[1200/630] w-full object-cover" />
-                <button type="button" onClick={() => set("coverId", null)} title="Зураг авах" className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80">
-                  <X className="size-3.5" />
-                </button>
+                <img src={`/media/${post.coverId}`} alt="" className="max-h-72 w-full bg-soft object-contain" />
+                <div className="absolute top-2 right-2 flex gap-1.5">
+                  <button type="button" onClick={() => setCropping(true)} title="Хайчлах" className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-black/80">
+                    <Crop className="size-3.5" /> Хайчлах
+                  </button>
+                  <button type="button" onClick={() => set("coverId", null)} title="Зураг авах" className="rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80">
+                    <X className="size-3.5" />
+                  </button>
+                </div>
               </div>
             ) : (
               <button
@@ -193,6 +228,58 @@ export function PostForm({ id, initial }: { id: string | null; initial: PostInpu
             {coverError && <p className="mt-1 text-xs text-brand">{coverError}</p>}
           </Field>
 
+          <Field label="Бусад зураг" hint="Нийтлэлийн доор галерей болж харагдана. Нэг дор олон файл сонгож болно. Сумаар дарааллыг өөрчилнө.">
+            {post.galleryIds.length > 0 && (
+              <ul className="mb-2 grid grid-cols-3 gap-2">
+                {post.galleryIds.map((gid, i) => (
+                  <li key={gid} className="group relative aspect-square overflow-hidden rounded-lg border border-line bg-soft">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/media/${gid}`} alt="" className="size-full object-contain" />
+                    <button type="button" onClick={() => removeGallery(gid)} title="Зураг авах" className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80">
+                      <X className="size-3" />
+                    </button>
+                    <div className="absolute inset-x-1 bottom-1 flex justify-between opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <button type="button" disabled={i === 0} onClick={() => moveGallery(i, -1)} title="Урагш" className="rounded-full bg-black/60 p-1 text-white hover:bg-black/80 disabled:opacity-30">
+                        <ChevronLeft className="size-3" />
+                      </button>
+                      <button type="button" disabled={i === post.galleryIds.length - 1} onClick={() => moveGallery(i, 1)} title="Хойш" className="rounded-full bg-black/60 p-1 text-white hover:bg-black/80 disabled:opacity-30">
+                        <ChevronRight className="size-3" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() => galleryInput.current?.click()}
+              disabled={galleryBusy}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong px-3 py-3 text-sm text-muted hover:border-brand hover:text-brand disabled:opacity-60"
+            >
+              {galleryBusy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+              {galleryBusy ? "Хуулж байна…" : "Зураг нэмэх"}
+            </button>
+            <input ref={galleryInput} type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(e) => onGallery(e.target)} />
+            {galleryError && <p className="mt-1 text-xs text-brand">{galleryError}</p>}
+          </Field>
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-line bg-surface p-5">
+          <Field label="Ангилал">
+            <div className="grid grid-cols-2 gap-2">
+              {(["NEWS", "TIP"] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => set("category", c)}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium ${post.category === c ? "border-brand bg-brand-soft text-brand" : "border-line text-muted hover:text-ink"}`}
+                >
+                  {c === "NEWS" ? "Мэдээ" : "Зөвлөмж"}
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <Field label="Slug (хаяг)" hint={`macs.mn/medee/${post.slug || "…"}`}>
             <input
               value={post.slug}
@@ -206,6 +293,7 @@ export function PostForm({ id, initial }: { id: string | null; initial: PostInpu
           </Field>
         </div>
       </aside>
+      {cropping && post.coverId && <CropDialog src={`/media/${post.coverId}`} onCancel={() => setCropping(false)} onDone={onCropped} />}
     </div>
   );
 }

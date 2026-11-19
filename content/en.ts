@@ -66,21 +66,25 @@ export const en: SiteContent = {
     title: "Solutions that fit your organization",
     intro: "From a single shop to multi-branch enterprises and donor-funded projects.",
     items: [
-      { name: "MACS ERP", purpose: "Complete financial management for enterprises", highlight: "7 modules, 50+ reports" },
-      { name: "MacsXE4", purpose: "Financial solution compliant with IAS / IFRS", highlight: "9 blocks, 80+ reports" },
-      { name: "MACS POS", purpose: "Point of sale for shops and retail centers", highlight: "Multi-branch, bank integration, E-Barimt" },
+      { name: "MACS ERP", purpose: "Complete financial management for enterprises", highlight: "7 modules, 50+ reports", href: "", hidden: false, comingSoon: false, group: "main", logo: "" },
+      { name: "MacsXE4", purpose: "Financial solution compliant with IAS / IFRS", highlight: "9 blocks, 80+ reports", href: "", hidden: false, comingSoon: false, group: "featured", logo: "" },
+      { name: "MACS POS", purpose: "Point of sale for shops and retail centers", highlight: "Multi-branch, bank integration, E-Barimt", href: "", hidden: false, comingSoon: false, group: "featured", logo: "" },
       {
         name: "Restaurant POS",
         purpose: "Tables, kitchen orders and reservations",
-        highlight: "Karaoke and room time billing",
+        highlight: "Karaoke and room time billing", href: "", hidden: false, comingSoon: false, group: "other", logo: "",
       },
-      { name: "Pharmacy POS", purpose: "Pharmacy inventory and sales", highlight: "Health insurance discount integration" },
+      { name: "Pharmacy POS", purpose: "Pharmacy inventory and sales", highlight: "Health insurance discount integration", href: "", hidden: false, comingSoon: false, group: "other", logo: "" },
       {
         name: "HR & payroll",
         purpose: "Employee records, attendance and payroll",
-        highlight: "Social insurance, health insurance and income tax reports",
+        highlight: "Social insurance, health insurance and income tax reports", href: "", hidden: false, comingSoon: false, group: "other", logo: "",
       },
     ],
+    moreLabel: "Learn more",
+    comingSoonLabel: "Coming soon",
+    aboutLabel: "About {name}",
+    otherTitle: "Other systems",
     alsoLabel: "Also",
     others: ["Auto service system", "Freight forwarding system", "Equipment rental system", "Time attendance system"],
   },
@@ -89,6 +93,7 @@ export const en: SiteContent = {
     title: "Everything connected",
     intro:
       "Every module posts to the general ledger and flows into your financial statements automatically. Choose only the modules you need.",
+    featuresLabel: "Key features",
     docsLink: "User manual (Mongolian)",
     items: {
       setup: {
@@ -174,7 +179,7 @@ export const en: SiteContent = {
       },
       {
         title: "Licensed by the Ministry of Finance",
-        body: "Our financial software is developed and operated in line with Mongolian laws and regulations.",
+        body: "Since 1998 we have continuously held the licence that the Accounting Department renews every 2 years.",
       },
       {
         title: "Fully in Mongolian",
@@ -293,6 +298,8 @@ export const en: SiteContent = {
     copyLink: "Copy link",
     copied: "Copied",
     back: "All posts",
+    readTime: "{n} min read",
+    relatedTitle: "More news and tips",
     onlyInMongolian: "This post is only available in Mongolian.",
   },
   footer: {

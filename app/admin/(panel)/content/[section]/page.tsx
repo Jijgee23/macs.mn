@@ -16,7 +16,8 @@ export const metadata: Metadata = { title: "Контент засах" };
 
 /**
  * Postgres jsonb doesn't keep key order, so put object keys back in the order of the
- * built-in content (which matches the page) before handing them to the editor.
+ * built-in content (which matches the page) before handing them to the editor. Text and on/off fields
+ * the built-in content has but a saved list item lacks are added empty/off.
  */
 function orderLike(value: unknown, template: unknown): unknown {
   if (Array.isArray(value)) {
@@ -26,8 +27,10 @@ function orderLike(value: unknown, template: unknown): unknown {
   if (value && typeof value === "object" && template && typeof template === "object" && !Array.isArray(template)) {
     const v = value as Record<string, unknown>;
     const t = template as Record<string, unknown>;
-    const keys = [...Object.keys(t).filter((k) => k in v), ...Object.keys(v).filter((k) => !(k in t))];
-    return Object.fromEntries(keys.map((k) => [k, orderLike(v[k], t[k])]));
+    // List items saved before a text field existed lack it (lists are replaced whole, not merged);
+    // add it empty so the editor shows it.
+    const keys = [...Object.keys(t).filter((k) => k in v || typeof t[k] === "string" || typeof t[k] === "boolean"), ...Object.keys(v).filter((k) => !(k in t))];
+    return Object.fromEntries(keys.map((k) => [k, k in v ? orderLike(v[k], t[k]) : typeof t[k] === "boolean" ? false : ""]));
   }
   return value;
 }

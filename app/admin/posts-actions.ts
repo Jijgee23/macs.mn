@@ -20,6 +20,7 @@ export type PostInput = {
   excerptEn: string;
   bodyEn: string;
   coverId: string | null;
+  galleryIds: string[];
 };
 
 export type SavePostResult = { ok: boolean; id?: string; errors?: string[] };
@@ -35,6 +36,7 @@ const schema = z.object({
   excerptEn: z.string().trim().max(400, "EN товч тайлбар 400 тэмдэгтээс ихгүй"),
   bodyEn: z.string(),
   coverId: z.string().nullable(),
+  galleryIds: z.array(z.string()).max(40, "Зураг 40-өөс ихгүй байна"),
 });
 
 /** First ~200 characters of the body text, for an empty excerpt. */
@@ -62,6 +64,11 @@ export async function savePost(id: string | null, input: PostInput): Promise<Sav
   if (d.coverId && !(await db.media.findUnique({ where: { id: d.coverId }, select: { id: true } }))) {
     errors.push("Cover зураг олдсонгүй");
   }
+  const galleryIds = [...new Set(d.galleryIds)];
+  if (galleryIds.length) {
+    const found = await db.media.count({ where: { id: { in: galleryIds } } });
+    if (found !== galleryIds.length) errors.push("Зарим зураг олдсонгүй — хуудсаа дахин ачаалж үзнэ үү");
+  }
   if (errors.length) return { ok: false, errors };
 
   const existing = id ? await db.post.findUnique({ where: { id }, select: { publishedAt: true } }) : null;
@@ -78,6 +85,7 @@ export async function savePost(id: string | null, input: PostInput): Promise<Sav
     excerptEn: hasEn ? d.excerptEn || autoExcerpt(bodyEn) : null,
     bodyEn: hasEn ? bodyEn : null,
     coverId: d.coverId,
+    galleryIds,
     // First publish stamps the date; later edits keep it.
     publishedAt: d.status === "PUBLISHED" ? (existing?.publishedAt ?? new Date()) : (existing?.publishedAt ?? null),
     updatedBy: admin.email,

@@ -45,6 +45,7 @@ async function EditPost({ params }: { params: PageProps<"/admin/posts/[id]">["pa
         excerptEn: p.excerptEn ?? "",
         bodyEn: p.bodyEn ?? "",
         coverId: p.coverId,
+        galleryIds: p.galleryIds,
       }}
     />
   );
